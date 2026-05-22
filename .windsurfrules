@@ -1,0 +1,293 @@
+# Project Rules - JC7 Judo Club MVP
+
+## Project Context
+Build a web application for JC7 (Judo Courneuvien 7), a judo club.
+
+Primary goal:
+digitize registrations, payments, and reduce manual admin work.
+
+This is an MVP.
+Prioritize simplicity and fast delivery.
+
+Public website:
+- landing page
+- registration page
+- Stripe checkout payment flow
+
+Admin dashboard:
+- secure login
+- registrations table
+- CRUD registrations
+- search
+- filtering
+- sorting
+- CSV / Excel export
+
+Do not add extra features unless explicitly requested.
+
+---
+
+## Business Context
+Target users:
+- parents registering children
+- adult members
+- club administrators
+
+Main problem solved:
+replace paper/manual registration workflows.
+
+---
+
+## Architecture Rules
+
+Separate concerns strictly.
+
+### Business Data (Supabase)
+Use Supabase for:
+- registrations
+- users
+- authentication
+- payments status
+- future attendance
+
+Never store business data elsewhere.
+
+---
+
+### Content Data (future Strapi)
+Prepare architecture for future CMS integration.
+
+Future content examples:
+- homepage editable text
+- club presentation
+- blog/news
+- gallery
+- events
+- FAQ
+- partners
+
+Future CMS:
+- https://strapi.io
+
+Do not implement Strapi now.
+Only prepare for future integration.
+
+---
+
+## Tech Stack
+
+Frontend:
+- Next.js App Router
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+
+Backend:
+- Supabase
+  - PostgreSQL
+  - Auth
+  - Row Level Security
+
+Admin:
+- TanStack Table
+- React Hook Form
+- Zod
+
+Payments:
+- Stripe
+- Stripe Checkout
+- Stripe Webhooks
+
+Export:
+- PapaParse or SheetJS
+
+Deployment:
+- Vercel
+
+Versioning:
+- GitHub
+
+Local development:
+- npm only
+- DO NOT use Docker
+
+---
+
+## Database Schema
+
+Table: registrations
+
+Fields:
+- id (uuid)
+- first_name
+- last_name
+- birth_date
+- email
+- phone
+- emergency_contact
+- category
+- medical_note (optional)
+- payment_status (pending | paid | cancelled)
+- stripe_session_id (optional)
+- created_at
+
+Indexes:
+- email
+- payment_status
+- created_at
+
+Use migrations only.
+Never manually edit production tables.
+
+---
+
+## Public Pages
+
+### Home page
+Must contain:
+- JC7 presentation
+- CTA registration button
+- contact information
+- mobile responsive
+
+---
+
+### Registration page
+Must contain:
+- validated form
+- clear confirmation message
+- redirect to Stripe Checkout
+- server-side validation
+- error handling
+
+Use:
+- React Hook Form
+- Zod
+
+---
+
+## Payment Rules
+
+MVP payment flow:
+1. user submits registration form
+2. save registration in Supabase with status = pending
+3. create Stripe Checkout session
+4. redirect user to Stripe Checkout
+5. Stripe webhook confirms payment
+6. update payment_status = paid
+
+Always:
+- use Stripe Checkout hosted page
+- use webhooks for confirmation
+- never build custom credit card forms
+- never store card data
+
+Webhook route:
+- /api/stripe/webhook
+
+---
+
+## Admin Dashboard
+
+Required pages:
+- /admin/login
+- /admin/dashboard
+- /admin/registrations
+- /admin/registrations/[id]
+
+Features:
+- pagination
+- sorting
+- filters
+- search
+- edit
+- delete
+- export CSV
+- filter by payment status
+
+Use TanStack Table.
+
+---
+
+## Coding Rules
+
+Always:
+- TypeScript strict mode
+- reusable components
+- no duplicated logic
+- separate UI from business logic
+- use server components first
+- client components only when required
+- no hardcoded secrets
+- environment variables only
+- keep files under 200 lines when possible
+
+---
+
+## UI Rules
+
+Design must be:
+- clean
+- simple
+- fast
+- mobile first
+- accessible
+
+Avoid:
+- unnecessary animations
+- overengineering
+- complex state management
+
+---
+## Testing Rules
+
+Do not use strict TDD.
+
+Development priority:
+1. ship working features first
+2. test critical business logic only
+
+Must test:
+- form validation
+- Stripe webhook
+- Supabase registration creation
+- admin authentication
+- CSV export
+
+Preferred tools:
+- Vitest for unit tests
+- Playwright for end-to-end tests
+
+Do not overtest UI styling.
+
+## Performance Rules
+
+Prefer:
+- server components
+- lazy loading
+- optimized images
+- minimal dependencies
+
+---
+
+## Security Rules
+
+Always:
+- protect admin routes
+- use Supabase auth middleware
+- validate all inputs
+- use Row Level Security
+- sanitize user input
+- validate Stripe webhook signatures
+
+---
+
+## Final Rule
+
+Priority order:
+1. ship fast
+2. keep code simple
+3. keep architecture clean
+4. prepare for future scale
+
+MVP first.
