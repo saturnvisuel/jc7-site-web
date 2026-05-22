@@ -1,9 +1,22 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { LogIn } from "lucide-react";
 
 export default function Home() {
   return (
     <main className="min-h-screen">
+      <header className="border-b">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <h2 className="text-xl font-bold">JC7</h2>
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/login">
+              <LogIn className="mr-2 h-4 w-4" />
+              Connexion
+            </Link>
+          </Button>
+        </div>
+      </header>
+
       <section className="container mx-auto px-4 py-16 md:py-24">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl md:text-6xl font-bold mb-6">

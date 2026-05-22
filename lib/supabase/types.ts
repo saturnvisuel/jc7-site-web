@@ -21,6 +21,7 @@ export interface Database {
           category: string;
           medical_note: string | null;
           payment_status: "pending" | "paid" | "cancelled";
+          payment_method: "carte" | "cheque" | "especes";
           stripe_session_id: string | null;
           created_at: string;
         };
@@ -35,6 +36,7 @@ export interface Database {
           category: string;
           medical_note?: string | null;
           payment_status?: "pending" | "paid" | "cancelled";
+          payment_method?: "carte" | "cheque" | "especes";
           stripe_session_id?: string | null;
           created_at?: string;
         };
@@ -49,6 +51,7 @@ export interface Database {
           category?: string;
           medical_note?: string | null;
           payment_status?: "pending" | "paid" | "cancelled";
+          payment_method?: "carte" | "cheque" | "especes";
           stripe_session_id?: string | null;
           created_at?: string;
         };

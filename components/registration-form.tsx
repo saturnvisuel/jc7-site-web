@@ -19,6 +19,7 @@ const registrationSchema = z.object({
   emergencyContact: z.string().min(5, "Contact d'urgence requis"),
   category: z.string().min(1, "Catégorie requise"),
   medicalNote: z.string().optional(),
+  paymentMethod: z.string().min(1, "Mode de paiement requis"),
 });
 
 type RegistrationFormData = z.infer<typeof registrationSchema>;
@@ -38,6 +39,8 @@ export function RegistrationForm() {
   });
 
   const category = watch("category");
+  const paymentMethod = watch("paymentMethod");
+  const [success, setSuccess] = useState(false);
 
   const onSubmit = async (data: RegistrationFormData) => {
     setIsSubmitting(true);
@@ -56,6 +59,7 @@ export function RegistrationForm() {
           emergency_contact: data.emergencyContact,
           category: data.category,
           medical_note: data.medicalNote || null,
+          payment_method: data.paymentMethod,
         }),
       });
 
@@ -65,8 +69,12 @@ export function RegistrationForm() {
 
       const result = await response.json();
 
-      if (result.checkoutUrl) {
+      // Si paiement en ligne, rediriger vers Stripe
+      if (data.paymentMethod === "carte" && result.checkoutUrl) {
         window.location.href = result.checkoutUrl;
+      } else {
+        // Sinon, afficher un message de confirmation
+        setSuccess(true);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Une erreur est survenue");
@@ -185,14 +193,53 @@ export function RegistrationForm() {
         />
       </div>
 
+      <div className="space-y-2">
+        <Label htmlFor="paymentMethod">Mode de paiement *</Label>
+        <Select onValueChange={(value) => setValue("paymentMethod", value)} value={paymentMethod}>
+          <SelectTrigger>
+            <SelectValue placeholder="Choisissez votre mode de paiement" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="carte">💳 Paiement en ligne (Carte bancaire)</SelectItem>
+            <SelectItem value="cheque">📝 Chèque (à remettre au club)</SelectItem>
+            <SelectItem value="especes">💵 Espèces (à remettre au club)</SelectItem>
+          </SelectContent>
+        </Select>
+        {errors.paymentMethod && (
+          <p className="text-sm text-destructive">{errors.paymentMethod.message}</p>
+        )}
+        
+        {paymentMethod && paymentMethod !== "carte" && (
+          <div className="mt-2 p-3 bg-amber-50 border-l-4 border-amber-600 rounded">
+            <p className="text-sm text-amber-800">
+              <strong>Note :</strong> Votre inscription sera enregistrée. 
+              Vous devrez régler {paymentMethod === "cheque" ? "par chèque" : "en espèces"} directement au club.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {success && (
+        <div className="p-4 bg-green-50 border-l-4 border-green-600 rounded">
+          <p className="text-green-800 font-semibold">✓ Inscription enregistrée avec succès !</p>
+          <p className="text-sm text-green-700 mt-1">
+            Vous recevrez un email de confirmation. 
+            {paymentMethod === "cheque" && " N'oubliez pas d'apporter votre chèque lors de votre première séance."}
+            {paymentMethod === "especes" && " N'oubliez pas d'apporter le montant en espèces lors de votre première séance."}
+          </p>
+        </div>
+      )}
+
       {error && (
         <div className="p-4 bg-destructive/10 text-destructive rounded-md">
           {error}
         </div>
       )}
 
-      <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
-        {isSubmitting ? "Traitement en cours..." : "Continuer vers le paiement"}
+      <Button type="submit" className="w-full" size="lg" disabled={isSubmitting || success}>
+        {isSubmitting ? "Traitement en cours..." : 
+         paymentMethod === "carte" ? "Continuer vers le paiement" : 
+         "Valider mon inscription"}
       </Button>
 
       <p className="text-sm text-muted-foreground text-center">
