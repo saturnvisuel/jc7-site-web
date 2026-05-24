@@ -30,10 +30,23 @@ const registrationSchema = z.object({
   first_name: z.string().min(2),
   last_name: z.string().min(2),
   birth_date: z.string(),
-  email: z.string().email(),
-  phone: z.string().min(10),
-  emergency_contact: z.string().min(5),
   category: z.string().min(1),
+  belt: z.string().nullable().optional(),
+  address: z.string().min(5),
+  postal_code: z.string().min(5),
+  city: z.string().min(2),
+  phone: z.string().min(10),
+  phone_alt: z.string().nullable().optional(),
+  email: z.string().email(),
+  social_security_number: z.string().min(15),
+  is_self_registration: z.boolean(),
+  guardian_first_name: z.string().nullable().optional(),
+  guardian_last_name: z.string().nullable().optional(),
+  guardian_address: z.string().nullable().optional(),
+  guardian_postal_code: z.string().nullable().optional(),
+  guardian_city: z.string().nullable().optional(),
+  guardian_phone: z.string().nullable().optional(),
+  guardian_email: z.string().nullable().optional(),
   medical_note: z.string().nullable().optional(),
   payment_method: z.string().min(1, "Mode de paiement requis"),
 });
@@ -113,10 +126,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Pour chèque ou espèces, retourner simplement le succès
+    // Pour chèque ou espèces, retourner simplement le succès avec l'ID
     return NextResponse.json({
       success: true,
-      registrationId: registration.id,
+      id: registration.id,
     });
   } catch (error) {
     console.error("Registration error:", error);

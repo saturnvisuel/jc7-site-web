@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -15,10 +16,15 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const { data: registrations } = await supabase
+  // Utiliser le client admin pour récupérer les données
+  const { data: registrations, error } = await supabaseAdmin
     .from("registrations")
     .select("*")
     .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Erreur lors de la récupération des inscriptions:", error);
+  }
 
   const total = registrations?.length || 0;
   const paid = registrations?.filter((r) => r.payment_status === "paid").length || 0;

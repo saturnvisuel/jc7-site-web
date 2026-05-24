@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { PaymentsManagement } from "@/components/payments-management";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,8 @@ export default async function PaymentsPage() {
     redirect("/login");
   }
 
-  const { data: registrations } = await supabase
+  // Utiliser le client admin pour récupérer les données
+  const { data: registrations } = await supabaseAdmin
     .from("registrations")
     .select("*")
     .in("payment_method", ["cheque", "especes"])

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   useReactTable,
   getCoreRowModel,
@@ -15,9 +16,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, Search } from "lucide-react";
+import { Search, FileText, Trash2 } from "lucide-react";
 import { Database } from "@/lib/supabase/types";
-import Papa from "papaparse";
+import { ExportCSVDialog } from "@/components/admin/export-csv-dialog";
 
 type Registration = Database["public"]["Tables"]["registrations"]["Row"];
 
@@ -44,9 +45,35 @@ const getStatusBadge = (status: string) => {
 };
 
 export function RegistrationsTable({ data }: RegistrationsTableProps) {
+  const router = useRouter();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer l'inscription de ${name} ?`)) {
+      return;
+    }
+
+    setDeletingId(id);
+    try {
+      const response = await fetch(`/api/registrations/${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        router.refresh();
+      } else {
+        alert("Erreur lors de la suppression");
+      }
+    } catch (error) {
+      console.error("Error deleting registration:", error);
+      alert("Erreur lors de la suppression");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const columns: ColumnDef<Registration>[] = [
     {
@@ -79,6 +106,32 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
       header: "Date d'inscription",
       cell: ({ row }) => new Date(row.getValue("created_at")).toLocaleDateString("fr-FR"),
     },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              window.open(`/api/registrations/${row.original.id}/pdf`, "_blank");
+            }}
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            PDF
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => handleDelete(row.original.id, `${row.original.first_name} ${row.original.last_name}`)}
+            disabled={deletingId === row.original.id}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
   ];
 
   const table = useReactTable({
@@ -98,31 +151,6 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
     },
   });
 
-  const exportToCSV = () => {
-    const csvData = data.map((row) => ({
-      Prénom: row.first_name,
-      Nom: row.last_name,
-      Email: row.email,
-      Téléphone: row.phone,
-      "Date de naissance": row.birth_date,
-      "Contact d'urgence": row.emergency_contact,
-      Catégorie: row.category,
-      "Note médicale": row.medical_note || "",
-      Statut: row.payment_status,
-      "Date d'inscription": new Date(row.created_at).toLocaleDateString("fr-FR"),
-    }));
-
-    const csv = Papa.unparse(csvData);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `inscriptions_jc7_${new Date().toISOString().split("T")[0]}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
   return (
     <div className="space-y-4">
@@ -154,10 +182,7 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={exportToCSV} variant="outline">
-          <Download className="mr-2 h-4 w-4" />
-          Exporter CSV
-        </Button>
+        <ExportCSVDialog data={data} />
       </div>
 
       <div className="rounded-md border bg-background">

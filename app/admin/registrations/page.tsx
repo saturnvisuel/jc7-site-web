@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { RegistrationsTable } from "@/components/admin/registrations-table";
 import { Button } from "@/components/ui/button";
@@ -16,10 +17,15 @@ export default async function RegistrationsPage() {
     redirect("/login");
   }
 
-  const { data: registrations } = await supabase
+  // Utiliser le client admin pour récupérer les données
+  const { data: registrations, error } = await supabaseAdmin
     .from("registrations")
     .select("*")
     .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Erreur lors de la récupération des inscriptions:", error);
+  }
 
   return (
     <div className="min-h-screen bg-muted/50">

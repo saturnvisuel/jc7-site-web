@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { redirect, notFound } from "next/navigation";
 import { RegistrationDetails } from "@/components/admin/registration-details";
 
@@ -17,7 +18,8 @@ export default async function RegistrationDetailPage({
     redirect("/login");
   }
 
-  const { data: registration } = await supabase
+  // Utiliser le client admin pour récupérer les données
+  const { data: registration } = await supabaseAdmin
     .from("registrations")
     .select("*")
     .eq("id", params.id)

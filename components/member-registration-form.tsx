@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
+import { calculateCategory, CATEGORIES, getTarif, getCategoryLabel } from "@/lib/categories";
 
 const memberRegistrationSchema = z.object({
   firstName: z.string().min(2, "Le prénom doit contenir au moins 2 caractères"),
@@ -51,6 +52,16 @@ export function MemberRegistrationForm({ userEmail }: MemberRegistrationFormProp
 
   const category = watch("category");
   const relationToMember = watch("relationToMember");
+  const birthDate = watch("birthDate");
+
+  useEffect(() => {
+    if (birthDate) {
+      const autoCategory = calculateCategory(birthDate);
+      if (autoCategory) {
+        setValue("category", autoCategory);
+      }
+    }
+  }, [birthDate, setValue]);
 
   const onSubmit = async (data: MemberRegistrationFormData) => {
     setIsSubmitting(true);
@@ -194,23 +205,25 @@ export function MemberRegistrationForm({ userEmail }: MemberRegistrationFormProp
 
         <div className="space-y-2">
           <Label htmlFor="category">Catégorie *</Label>
-          <Select onValueChange={(value) => setValue("category", value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Sélectionnez une catégorie" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="baby">Baby Judo (4-5 ans)</SelectItem>
-              <SelectItem value="mini-poussin">Mini-Poussin (6-7 ans)</SelectItem>
-              <SelectItem value="poussin">Poussin (8-9 ans)</SelectItem>
-              <SelectItem value="benjamin">Benjamin (10-11 ans)</SelectItem>
-              <SelectItem value="minime">Minime (12-13 ans)</SelectItem>
-              <SelectItem value="cadet">Cadet (14-15 ans)</SelectItem>
-              <SelectItem value="junior">Junior (16-17 ans)</SelectItem>
-              <SelectItem value="senior">Senior (18+ ans)</SelectItem>
-            </SelectContent>
-          </Select>
+          <Input
+            id="category"
+            value={category ? getCategoryLabel(category) : "Saisissez d'abord la date de naissance"}
+            disabled
+            className="bg-gray-50"
+          />
+          <input type="hidden" {...register("category")} value={category || ""} />
           {errors.category && (
             <p className="text-sm text-destructive">{errors.category.message}</p>
+          )}
+          {category && (
+            <div className="mt-2">
+              <p className="text-xs text-muted-foreground mb-2">Catégorie déterminée automatiquement selon la date de naissance</p>
+              <div className="bg-blue-50 border-l-4 border-blue-600 p-3 rounded">
+                <p className="text-sm font-semibold text-blue-900">
+                  Montant : {getTarif(category)} €
+                </p>
+              </div>
+            </div>
           )}
         </div>
 
