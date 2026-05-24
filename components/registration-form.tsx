@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { calculateCategory, CATEGORIES, getTarif, getCategoryLabel } from "@/lib/categories";
 import { RGPDConsent } from "@/components/rgpd-consent";
+import { createClient } from "@/lib/supabase/client";
 
 const registrationSchema = z.object({
   // Informations du pratiquant
@@ -20,6 +21,17 @@ const registrationSchema = z.object({
   birthDate: z.string().min(1, "La date de naissance est requise"),
   category: z.string().min(1, "Catégorie requise"),
   belt: z.string().optional(),
+  licenseNumber: z.string().optional().refine(
+    (val) => {
+      if (!val || val === "") return true;
+      // Format: MJJMMAAAANNNNNXX (17 caractères)
+      const regex = /^[MF]\d{8}[A-Z*]{5}\d{2}$/;
+      return regex.test(val);
+    },
+    {
+      message: "Format invalide. Exemple: M18121999TAUPI01 ou F22012002LOTI*01",
+    }
+  ),
   address: z.string().min(5, "Adresse requise"),
   postalCode: z.string().min(5, "Code postal requis"),
   city: z.string().min(2, "Ville requise"),
@@ -39,6 +51,7 @@ const registrationSchema = z.object({
   guardianEmail: z.string().optional(),
   
   medicalNote: z.string().optional(),
+  medicalCertificateUrl: z.string().optional(),
   paymentMethod: z.string().min(1, "Mode de paiement requis"),
 }).refine(
   (data) => {
@@ -69,6 +82,8 @@ export function RegistrationForm() {
   const [success, setSuccess] = useState(false);
   const [registrationId, setRegistrationId] = useState<string | null>(null);
   const [rgpdConsent, setRgpdConsent] = useState(false);
+  const [medicalCertificateFile, setMedicalCertificateFile] = useState<File | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
 
   const {
     register,
@@ -98,6 +113,54 @@ export function RegistrationForm() {
     }
   }, [birthDate, setValue]);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Vérifier le type de fichier
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+    if (!validTypes.includes(file.type)) {
+      setError("Format de fichier non valide. Utilisez JPG, PNG ou PDF.");
+      return;
+    }
+
+    // Vérifier la taille (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Le fichier est trop volumineux. Maximum 5MB.");
+      return;
+    }
+
+    setMedicalCertificateFile(file);
+    setError(null);
+  };
+
+  const uploadMedicalCertificate = async (file: File, registrationId: string): Promise<string | null> => {
+    try {
+      const supabase = createClient();
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${registrationId}-${Date.now()}.${fileExt}`;
+      const filePath = `medical-certificates/${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        console.error('Erreur upload Supabase:', error);
+        return null;
+      }
+
+      // Retourner le chemin du fichier (pas l'URL publique pour la sécurité)
+      return filePath;
+    } catch (error) {
+      console.error('Erreur lors de l\'upload:', error);
+      return null;
+    }
+  };
+
   const onSubmit = async (data: RegistrationFormData) => {
     if (!rgpdConsent) {
       setError("Vous devez accepter la politique de confidentialité pour continuer.");
@@ -117,6 +180,7 @@ export function RegistrationForm() {
           birth_date: data.birthDate,
           category: data.category,
           belt: data.belt || null,
+          license_number: data.licenseNumber || null,
           address: data.address,
           postal_code: data.postalCode,
           city: data.city,
@@ -142,6 +206,24 @@ export function RegistrationForm() {
       }
 
       const result = await response.json();
+
+      // Uploader le certificat médical si présent
+      if (medicalCertificateFile && result.id) {
+        setUploadingFile(true);
+        const certificateUrl = await uploadMedicalCertificate(medicalCertificateFile, result.id);
+        
+        if (certificateUrl) {
+          // Mettre à jour l'inscription avec l'URL du certificat
+          await fetch(`/api/registrations/${result.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              medical_certificate_url: certificateUrl,
+            }),
+          });
+        }
+        setUploadingFile(false);
+      }
 
       if (data.paymentMethod === "carte" && result.checkoutUrl) {
         window.location.href = result.checkoutUrl;
@@ -246,6 +328,23 @@ export function RegistrationForm() {
                 <SelectItem value="noire">Noire</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="licenseNumber">Numéro de licence (optionnel)</Label>
+            <Input
+              id="licenseNumber"
+              {...register("licenseNumber")}
+              placeholder="Ex: M18121999TAUPI01"
+              maxLength={17}
+              className="uppercase"
+            />
+            {errors.licenseNumber && (
+              <p className="text-sm text-destructive">{errors.licenseNumber.message}</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Pour les anciens licenciés uniquement. Format: MJJMMAAAANNNNNXX
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -443,17 +542,44 @@ export function RegistrationForm() {
       <div className="bg-white p-6 rounded-lg shadow-sm border">
         <h2 className="text-xl font-bold mb-6 text-primary">Informations médicales</h2>
         
-        <div className="space-y-2">
-          <Label htmlFor="medicalNote">Note médicale (optionnel)</Label>
-          <Textarea
-            id="medicalNote"
-            {...register("medicalNote")}
-            placeholder="Allergies, traitements en cours, contre-indications..."
-            rows={4}
-          />
-          <p className="text-xs text-muted-foreground">
-            Ces informations resteront confidentielles et ne seront utilisées qu&apos;en cas d&apos;urgence.
-          </p>
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="medicalCertificate">Certificat médical (optionnel)</Label>
+            <Input
+              id="medicalCertificate"
+              type="file"
+              accept=".jpg,.jpeg,.png,.pdf"
+              onChange={handleFileChange}
+              disabled={isSubmitting || uploadingFile}
+              className="cursor-pointer"
+            />
+            {medicalCertificateFile && (
+              <p className="text-sm text-green-600">
+                ✓ Fichier sélectionné : {medicalCertificateFile.name}
+              </p>
+            )}
+            {uploadingFile && (
+              <p className="text-sm text-blue-600">
+                Upload en cours...
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Formats acceptés : JPG, PNG, PDF (max 5MB)
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="medicalNote">Note médicale (optionnel)</Label>
+            <Textarea
+              id="medicalNote"
+              {...register("medicalNote")}
+              placeholder="Allergies, traitements en cours, contre-indications..."
+              rows={4}
+            />
+            <p className="text-xs text-muted-foreground">
+              Ces informations resteront confidentielles et ne seront utilisées qu&apos;en cas d&apos;urgence.
+            </p>
+          </div>
         </div>
       </div>
 

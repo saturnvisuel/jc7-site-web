@@ -32,6 +32,7 @@ const registrationSchema = z.object({
   birth_date: z.string(),
   category: z.string().min(1),
   belt: z.string().nullable().optional(),
+  license_number: z.string().nullable().optional(),
   address: z.string().min(5),
   postal_code: z.string().min(5),
   city: z.string().min(2),

@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { calculateCategory, CATEGORIES, getTarif, getCategoryLabel } from "@/lib/categories";
 import { Trash2, Plus } from "lucide-react";
 import { RGPDConsent } from "@/components/rgpd-consent";
+import { createClient } from "@/lib/supabase/client";
 
 const childSchema = z.object({
   firstName: z.string().min(2, "Prénom requis"),
@@ -21,6 +22,17 @@ const childSchema = z.object({
   category: z.string().min(1, "Catégorie requise"),
   socialSecurityNumber: z.string().min(15, "Numéro de sécurité sociale requis (15 chiffres)"),
   belt: z.string().optional(),
+  licenseNumber: z.string().optional().refine(
+    (val) => {
+      if (!val || val === "") return true;
+      // Format: MJJMMAAAANNNNNXX (17 caractères)
+      const regex = /^[MF]\d{8}[A-Z*]{5}\d{2}$/;
+      return regex.test(val);
+    },
+    {
+      message: "Format invalide. Exemple: M18121999TAUPI01",
+    }
+  ),
   medicalNote: z.string().optional(),
 });
 
@@ -47,6 +59,8 @@ export function RegistrationFormFamily() {
   const [success, setSuccess] = useState(false);
   const [registrationIds, setRegistrationIds] = useState<string[]>([]);
   const [rgpdConsent, setRgpdConsent] = useState(false);
+  const [medicalCertificates, setMedicalCertificates] = useState<{[key: number]: File}>({});
+  const [uploadingFiles, setUploadingFiles] = useState(false);
 
   const {
     register,
@@ -66,6 +80,7 @@ export function RegistrationFormFamily() {
           category: "",
           socialSecurityNumber: "",
           belt: "",
+          licenseNumber: "",
           medicalNote: "",
         },
       ],
@@ -85,7 +100,11 @@ export function RegistrationFormFamily() {
       if (child.birthDate) {
         const autoCategory = calculateCategory(child.birthDate);
         if (autoCategory && child.category !== autoCategory) {
-          setValue(`children.${index}.category`, autoCategory, { shouldValidate: false });
+          setValue(`children.${index}.category`, autoCategory, { 
+            shouldValidate: false,
+            shouldDirty: false,
+            shouldTouch: false
+          });
         }
       }
     });
@@ -125,6 +144,52 @@ export function RegistrationFormFamily() {
     return getTarif(child.category, childCount);
   };
 
+  const handleFileChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+    if (!validTypes.includes(file.type)) {
+      setError("Format de fichier non valide. Utilisez JPG, PNG ou PDF.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Le fichier est trop volumineux. Maximum 5MB.");
+      return;
+    }
+
+    setMedicalCertificates(prev => ({ ...prev, [index]: file }));
+    setError(null);
+  };
+
+  const uploadMedicalCertificate = async (file: File, registrationId: string): Promise<string | null> => {
+    try {
+      const supabase = createClient();
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${registrationId}-${Date.now()}.${fileExt}`;
+      const filePath = `medical-certificates/${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        console.error('Erreur upload Supabase:', error);
+        return null;
+      }
+
+      // Retourner le chemin du fichier (pas l'URL publique pour la sécurité)
+      return filePath;
+    } catch (error) {
+      console.error('Erreur lors de l\'upload:', error);
+      return null;
+    }
+  };
+
   const onSubmit = async (data: FamilyRegistrationFormData) => {
     if (!rgpdConsent) {
       setError("Vous devez accepter la politique de confidentialité pour continuer.");
@@ -159,6 +224,32 @@ export function RegistrationFormFamily() {
       }
 
       const result = await response.json();
+
+      // Uploader les certificats médicaux si présents
+      if (result.registrationIds && Object.keys(medicalCertificates).length > 0) {
+        setUploadingFiles(true);
+        
+        for (let i = 0; i < result.registrationIds.length; i++) {
+          const registrationId = result.registrationIds[i];
+          const certificate = medicalCertificates[i];
+          
+          if (certificate) {
+            const certificateUrl = await uploadMedicalCertificate(certificate, registrationId);
+            
+            if (certificateUrl) {
+              await fetch(`/api/registrations/${registrationId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  medical_certificate_url: certificateUrl,
+                }),
+              });
+            }
+          }
+        }
+        
+        setUploadingFiles(false);
+      }
 
       if (data.paymentMethod === "carte" && result.checkoutUrl) {
         window.location.href = result.checkoutUrl;
@@ -453,6 +544,45 @@ export function RegistrationFormFamily() {
                     <SelectItem value="noire">Noire</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={`children.${index}.licenseNumber`}>Numéro de licence (optionnel)</Label>
+                <Input
+                  id={`children.${index}.licenseNumber`}
+                  {...register(`children.${index}.licenseNumber`)}
+                  placeholder="Ex: M18121999TAUPI01"
+                  maxLength={17}
+                  className="uppercase"
+                />
+                {errors.children?.[index]?.licenseNumber && (
+                  <p className="text-sm text-destructive">
+                    {errors.children[index]?.licenseNumber?.message}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Pour les anciens licenciés uniquement. Format: MJJMMAAAANNNNNXX
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={`children.${index}.medicalCertificate`}>Certificat médical (optionnel)</Label>
+                <Input
+                  id={`children.${index}.medicalCertificate`}
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  onChange={(e) => handleFileChange(index, e)}
+                  disabled={isSubmitting || uploadingFiles}
+                  className="cursor-pointer"
+                />
+                {medicalCertificates[index] && (
+                  <p className="text-sm text-green-600">
+                    ✓ Fichier sélectionné : {medicalCertificates[index].name}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Formats acceptés : JPG, PNG, PDF (max 5MB)
+                </p>
               </div>
 
               <div className="space-y-2">

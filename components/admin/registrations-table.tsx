@@ -16,7 +16,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, FileText, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Search, FileText, Trash2, CheckCircle2, XCircle, MoreVertical, Download } from "lucide-react";
 import { Database } from "@/lib/supabase/types";
 import { ExportCSVDialog } from "@/components/admin/export-csv-dialog";
 
@@ -97,6 +104,18 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
       header: "Catégorie",
     },
     {
+      accessorKey: "medical_certificate_url",
+      header: "Certificat",
+      cell: ({ row }) => {
+        const hasFile = !!row.getValue("medical_certificate_url");
+        return hasFile ? (
+          <CheckCircle2 className="h-5 w-5 text-green-600" />
+        ) : (
+          <XCircle className="h-5 w-5 text-gray-300" />
+        );
+      },
+    },
+    {
       accessorKey: "payment_status",
       header: "Statut",
       cell: ({ row }) => getStatusBadge(row.getValue("payment_status")),
@@ -110,26 +129,54 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              window.open(`/api/registrations/${row.original.id}/pdf`, "_blank");
-            }}
-          >
-            <FileText className="h-4 w-4 mr-2" />
-            PDF
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => handleDelete(row.original.id, `${row.original.first_name} ${row.original.last_name}`)}
-            disabled={deletingId === row.original.id}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={() => {
+                window.open(`/api/registrations/${row.original.id}/pdf`, "_blank");
+              }}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Télécharger PDF
+            </DropdownMenuItem>
+            {row.original.medical_certificate_url && (
+              <DropdownMenuItem
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/storage/signed-url', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ filePath: row.original.medical_certificate_url }),
+                    });
+                    const { signedUrl } = await response.json();
+                    if (signedUrl) {
+                      window.open(signedUrl, '_blank');
+                    }
+                  } catch (error) {
+                    console.error('Erreur téléchargement:', error);
+                  }
+                }}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Certificat médical
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-red-600"
+              onClick={() => handleDelete(row.original.id, `${row.original.first_name} ${row.original.last_name}`)}
+              disabled={deletingId === row.original.id}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Supprimer
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ];

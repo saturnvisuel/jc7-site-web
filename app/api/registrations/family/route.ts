@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
           birth_date: child.birthDate,
           category: child.category,
           belt: child.belt || null,
+          license_number: child.licenseNumber || null,
           address: guardian.address,
           postal_code: guardian.postal_code,
           city: guardian.city,

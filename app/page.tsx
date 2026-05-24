@@ -13,7 +13,7 @@ export default function Home() {
             <Link href="/" className="text-2xl font-semibold tracking-tight text-gray-900">
               JC7
             </Link>
-            <div className="flex items-center gap-8">
+            <div className="flex items-center gap-6">
               <Link href="#about" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
                 Le Club
               </Link>
@@ -23,6 +23,11 @@ export default function Home() {
               <Link href="#contact" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
                 Contact
               </Link>
+              <Button asChild size="sm" className="bg-red-600 hover:bg-red-700 text-white rounded-full">
+                <Link href="/inscription">
+                  S'inscrire
+                </Link>
+              </Button>
               <Button asChild variant="ghost" size="sm" className="text-sm">
                 <Link href="/login">
                   <LogIn className="mr-2 h-4 w-4" />
@@ -249,7 +254,7 @@ export default function Home() {
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Email</h3>
               <a 
                 href={`mailto:${CLUB_INFO.email}`} 
-                className="text-lg text-red-600 hover:text-red-700 font-medium break-all"
+                className="text-lg text-gray-900 hover:text-gray-700 font-medium break-all"
               >
                 {CLUB_INFO.email}
               </a>

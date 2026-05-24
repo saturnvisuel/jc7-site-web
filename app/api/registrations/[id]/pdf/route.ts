@@ -76,6 +76,11 @@ export async function GET(
       y += 7;
     }
     
+    if (registration.license_number) {
+      doc.text(`Numéro de licence : ${registration.license_number}`, 20, y);
+      y += 7;
+    }
+    
     doc.text(`Adresse : ${registration.address}`, 20, y);
     y += 7;
     doc.text(`Code postal : ${registration.postal_code}`, 20, y);

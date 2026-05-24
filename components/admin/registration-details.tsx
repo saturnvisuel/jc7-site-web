@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, Trash2, Download, FileText, Image } from "lucide-react";
 import Link from "next/link";
 import { Database } from "@/lib/supabase/types";
 
@@ -32,6 +32,26 @@ export function RegistrationDetails({ registration }: RegistrationDetailsProps) 
     medical_note: registration.medical_note || "",
     payment_status: registration.payment_status,
   });
+
+  const downloadCertificate = async () => {
+    if (!registration.medical_certificate_url) return;
+
+    try {
+      const response = await fetch('/api/storage/signed-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filePath: registration.medical_certificate_url }),
+      });
+
+      const { signedUrl } = await response.json();
+      
+      if (signedUrl) {
+        window.open(signedUrl, '_blank');
+      }
+    } catch (error) {
+      console.error('Erreur téléchargement:', error);
+    }
+  };
 
   const handleUpdate = async () => {
     setLoading(true);
@@ -199,15 +219,47 @@ export function RegistrationDetails({ registration }: RegistrationDetailsProps) 
 
         <div>
           <h2 className="text-xl font-bold mb-4">Informations médicales</h2>
-          <div className="space-y-2">
-            <Label htmlFor="medical_note">Note médicale</Label>
-            <Textarea
-              id="medical_note"
-              value={formData.medical_note}
-              onChange={(e) => setFormData({ ...formData, medical_note: e.target.value })}
-              disabled={!isEditing}
-              rows={4}
-            />
+          <div className="space-y-4">
+            {registration.medical_certificate_url && (
+              <div className="space-y-2">
+                <Label>Certificat médical</Label>
+                <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
+                  {registration.medical_certificate_url.toLowerCase().endsWith('.pdf') ? (
+                    <FileText className="h-8 w-8 text-red-600" />
+                  ) : (
+                    <Image className="h-8 w-8 text-blue-600" />
+                  )}
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">
+                      {registration.medical_certificate_url.split('/').pop()?.split('-').slice(1).join('-') || 'Certificat médical'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {registration.medical_certificate_url.toLowerCase().endsWith('.pdf') ? 'Document PDF' : 'Image'}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={downloadCertificate}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Télécharger
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="medical_note">Note médicale</Label>
+              <Textarea
+                id="medical_note"
+                value={formData.medical_note}
+                onChange={(e) => setFormData({ ...formData, medical_note: e.target.value })}
+                disabled={!isEditing}
+                rows={4}
+              />
+            </div>
           </div>
         </div>
 

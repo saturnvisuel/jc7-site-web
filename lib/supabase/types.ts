@@ -19,7 +19,10 @@ export interface Database {
           phone: string;
           emergency_contact: string;
           category: string;
+          belt: string | null;
+          license_number: string | null;
           medical_note: string | null;
+          medical_certificate_url: string | null;
           payment_status: "pending" | "paid" | "cancelled";
           payment_method: "carte" | "cheque" | "especes";
           stripe_session_id: string | null;
@@ -34,7 +37,10 @@ export interface Database {
           phone: string;
           emergency_contact: string;
           category: string;
+          belt?: string | null;
+          license_number?: string | null;
           medical_note?: string | null;
+          medical_certificate_url?: string | null;
           payment_status?: "pending" | "paid" | "cancelled";
           payment_method?: "carte" | "cheque" | "especes";
           stripe_session_id?: string | null;
@@ -49,7 +55,10 @@ export interface Database {
           phone?: string;
           emergency_contact?: string;
           category?: string;
+          belt?: string | null;
+          license_number?: string | null;
           medical_note?: string | null;
+          medical_certificate_url?: string | null;
           payment_status?: "pending" | "paid" | "cancelled";
           payment_method?: "carte" | "cheque" | "especes";
           stripe_session_id?: string | null;
