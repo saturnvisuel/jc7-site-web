@@ -11,8 +11,8 @@ export default function InscriptionPage() {
 
   if (formType === null) {
     return (
-      <main className="min-h-screen bg-white py-12">
-        <div className="max-w-4xl mx-auto px-6">
+      <main className="min-h-screen bg-white py-8 sm:py-12">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <Button
             variant="ghost"
             onClick={() => window.location.href = '/'}
@@ -21,25 +21,25 @@ export default function InscriptionPage() {
             ← Retour à l'accueil
           </Button>
           
-          <div className="mb-12 text-center">
-            <h1 className="text-4xl font-bold text-gray-900 mb-3">
+          <div className="mb-8 sm:mb-12 text-center">
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2 sm:mb-3">
               Inscription JC7
             </h1>
-            <p className="text-lg text-gray-600">
+            <p className="text-base sm:text-lg text-gray-600">
               Choisissez votre type d'inscription
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <button
               onClick={() => setFormType("single")}
-              className="bg-white p-8 rounded-2xl border-2 border-gray-200 hover:border-red-600 transition-all text-left"
+              className="bg-white p-6 sm:p-8 rounded-2xl border-2 border-gray-200 hover:border-red-600 transition-all text-left"
             >
               <div className="mb-4">
                 <User className="h-12 w-12 text-red-600" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-3">Inscription simple</h2>
-              <p className="text-gray-600 mb-4">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 sm:mb-3">Inscription simple</h2>
+              <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">
                 Pour une seule personne
               </p>
               <div className="space-y-2 text-sm">
@@ -56,13 +56,13 @@ export default function InscriptionPage() {
 
             <button
               onClick={() => setFormType("family")}
-              className="bg-white p-8 rounded-2xl border-2 border-gray-200 hover:border-red-600 transition-all text-left"
+              className="bg-white p-6 sm:p-8 rounded-2xl border-2 border-gray-200 hover:border-red-600 transition-all text-left"
             >
               <div className="mb-4">
                 <Users className="h-12 w-12 text-red-600" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-3">Inscription familiale</h2>
-              <p className="text-gray-600 mb-4">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 sm:mb-3">Inscription familiale</h2>
+              <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">
                 Plusieurs enfants d'une même famille
               </p>
               <div className="space-y-2 text-sm mb-4">
@@ -90,21 +90,21 @@ export default function InscriptionPage() {
   }
 
   return (
-    <main className="min-h-screen py-12">
-      <div className="container mx-auto px-4">
-        <div className="mb-8">
+    <main className="min-h-screen py-8 sm:py-12">
+      <div className="container mx-auto px-4 sm:px-6">
+        <div className="mb-6 sm:mb-8">
           <Button
             variant="ghost"
             onClick={() => setFormType(null)}
-            className="mb-4"
+            className="mb-3 sm:mb-4"
           >
             ← Retour au choix
           </Button>
           <div className="text-center">
-            <h1 className="text-4xl font-bold mb-4">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">
               {formType === "single" ? "Inscription simple" : "Inscription familiale"}
             </h1>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-base sm:text-lg text-muted-foreground px-4">
               {formType === "single"
                 ? "Remplissez le formulaire ci-dessous pour vous inscrire"
                 : "Inscrivez plusieurs enfants et bénéficiez de réductions"}

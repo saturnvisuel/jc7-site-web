@@ -41,11 +41,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/50">
-      <div className="w-full max-w-md p-8 bg-background rounded-lg shadow-lg">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold mb-2">JC7 Admin</h1>
-          <p className="text-muted-foreground">Connectez-vous pour accéder au dashboard</p>
+    <div className="min-h-screen flex items-center justify-center bg-muted/50 px-4">
+      <div className="w-full max-w-md p-6 sm:p-8 bg-background rounded-lg shadow-lg">
+        <div className="mb-6 sm:mb-8 text-center">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2">JC7 Admin</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Connectez-vous pour accéder au dashboard</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">

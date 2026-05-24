@@ -27,35 +27,37 @@ export default async function PaymentsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-background border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-bold">Gestion des Paiements</h1>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" asChild>
+        <div className="container mx-auto px-4 sm:px-6 py-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
+              <h1 className="text-xl sm:text-2xl font-bold">Gestion des Paiements</h1>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button variant="outline" size="sm" asChild className="flex-1 sm:flex-none">
                   <Link href="/admin/dashboard">
                     <ArrowLeft className="mr-2 h-4 w-4" />
-                    Dashboard
+                    <span className="hidden sm:inline">Dashboard</span>
+                    <span className="sm:hidden">Accueil</span>
                   </Link>
                 </Button>
-                <Button variant="outline" size="sm" asChild>
+                <Button variant="outline" size="sm" asChild className="flex-1 sm:flex-none">
                   <Link href="/admin/registrations">Inscriptions</Link>
                 </Button>
               </div>
             </div>
-            <form action="/api/auth/signout" method="post">
-              <Button variant="ghost" size="sm" type="submit">
+            <form action="/api/auth/signout" method="post" className="w-full sm:w-auto">
+              <Button variant="ghost" size="sm" type="submit" className="w-full sm:w-auto">
                 <LogOut className="mr-2 h-4 w-4" />
-                Déconnexion
+                <span className="hidden sm:inline">Déconnexion</span>
+                <span className="sm:hidden">Sortir</span>
               </Button>
             </form>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h2 className="text-lg text-muted-foreground">
+      <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="mb-4 sm:mb-6">
+          <h2 className="text-base sm:text-lg text-muted-foreground">
             Paiements en attente (chèque et espèces)
           </h2>
         </div>

@@ -6,8 +6,8 @@ export function Footer() {
 
   return (
     <footer className="bg-gray-900 text-gray-300 mt-auto">
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
           {/* À propos */}
           <div>
             <h3 className="text-white font-bold text-lg mb-4">{CLUB_INFO.name}</h3>

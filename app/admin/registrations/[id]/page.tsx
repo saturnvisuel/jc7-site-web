@@ -32,12 +32,12 @@ export default async function RegistrationDetailPage({
   return (
     <div className="min-h-screen bg-muted/50">
       <header className="bg-background border-b">
-        <div className="container mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold">Détails de l&apos;inscription</h1>
+        <div className="container mx-auto px-4 sm:px-6 py-4">
+          <h1 className="text-xl sm:text-2xl font-bold">Détails de l&apos;inscription</h1>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <RegistrationDetails registration={registration} />
       </main>
     </div>

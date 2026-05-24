@@ -201,9 +201,9 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-        <div className="flex-1 flex gap-4 items-center">
-          <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col gap-3 sm:gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Rechercher..."
@@ -218,7 +218,7 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
               table.getColumn("payment_status")?.setFilterValue(value === "all" ? "" : value)
             }
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Statut" />
             </SelectTrigger>
             <SelectContent>
@@ -232,15 +232,15 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
         <ExportCSVDialog data={data} />
       </div>
 
-      <div className="rounded-md border bg-background">
-        <table className="w-full">
+      <div className="rounded-md border bg-background overflow-x-auto">
+        <table className="w-full min-w-[800px]">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="border-b">
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/50"
+                    className="px-3 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium cursor-pointer hover:bg-muted/50 whitespace-nowrap"
                     onClick={header.column.getToggleSortingHandler()}
                   >
                     {header.isPlaceholder
@@ -260,7 +260,7 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
               table.getRowModel().rows.map((row) => (
                 <tr key={row.id} className="border-b hover:bg-muted/50">
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-4 py-3 text-sm">
+                    <td key={cell.id} className="px-3 sm:px-4 py-3 text-xs sm:text-sm">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
@@ -277,8 +277,8 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
         </table>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
+        <div className="text-xs sm:text-sm text-muted-foreground">
           {table.getFilteredRowModel().rows.length} inscription(s) au total
         </div>
         <div className="flex items-center space-x-2">
@@ -288,9 +288,10 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
-            Précédent
+            <span className="hidden sm:inline">Précédent</span>
+            <span className="sm:hidden">←</span>
           </Button>
-          <div className="text-sm">
+          <div className="text-xs sm:text-sm">
             Page {table.getState().pagination.pageIndex + 1} sur {table.getPageCount()}
           </div>
           <Button
@@ -299,7 +300,8 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
-            Suivant
+            <span className="hidden sm:inline">Suivant</span>
+            <span className="sm:hidden">→</span>
           </Button>
         </div>
       </div>
