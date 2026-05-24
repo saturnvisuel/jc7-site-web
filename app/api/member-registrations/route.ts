@@ -32,8 +32,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = memberRegistrationSchema.parse(body);
 
-    const { data: registration, error: dbError } = await supabase
-      .from("registrations")
+    const { data: registration, error: dbError } = await (supabase
+      .from("registrations") as any)
       .insert({
         ...validatedData,
         payment_status: "pending",

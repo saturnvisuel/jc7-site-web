@@ -41,8 +41,8 @@ export async function POST(request: NextRequest) {
     const registrationId = session.metadata?.registration_id;
 
     if (registrationId) {
-      const { error } = await supabaseAdmin
-        .from("registrations")
+      const { error } = await (supabaseAdmin
+        .from("registrations") as any)
         .update({ payment_status: "paid" })
         .eq("id", registrationId);
 

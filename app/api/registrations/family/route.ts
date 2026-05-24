@@ -135,8 +135,8 @@ export async function POST(request: NextRequest) {
       });
 
       for (const regId of registrationIds) {
-        await supabaseAdmin
-          .from("registrations")
+        await (supabaseAdmin
+          .from("registrations") as any)
           .update({ stripe_session_id: session.id })
           .eq("id", regId);
       }

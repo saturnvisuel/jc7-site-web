@@ -34,6 +34,9 @@ export async function GET(
       );
     }
 
+    // Cast pour éviter les erreurs TypeScript
+    const reg = registration as any;
+
     // Créer le PDF
     const doc = new jsPDF();
     
@@ -45,7 +48,7 @@ export async function GET(
     
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text(`Date d'inscription : ${new Date(registration.created_at).toLocaleDateString("fr-FR")}`, 105, 40, { align: "center" });
+    doc.text(`Date d'inscription : ${new Date(reg.created_at).toLocaleDateString("fr-FR")}`, 105, 40, { align: "center" });
     
     // Ligne de séparation
     doc.setLineWidth(0.5);
@@ -62,45 +65,45 @@ export async function GET(
     doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
     
-    doc.text(`Nom : ${registration.last_name}`, 20, y);
+    doc.text(`Nom : ${reg.last_name}`, 20, y);
     y += 7;
-    doc.text(`Prénom : ${registration.first_name}`, 20, y);
+    doc.text(`Prénom : ${reg.first_name}`, 20, y);
     y += 7;
-    doc.text(`Date de naissance : ${new Date(registration.birth_date).toLocaleDateString("fr-FR")}`, 20, y);
+    doc.text(`Date de naissance : ${new Date(reg.birth_date).toLocaleDateString("fr-FR")}`, 20, y);
     y += 7;
-    doc.text(`Catégorie d'âge : ${registration.category}`, 20, y);
+    doc.text(`Catégorie d'âge : ${reg.category}`, 20, y);
     y += 7;
     
-    if (registration.belt) {
-      doc.text(`Ceinture : ${registration.belt}`, 20, y);
+    if (reg.belt) {
+      doc.text(`Ceinture : ${reg.belt}`, 20, y);
       y += 7;
     }
     
-    if (registration.license_number) {
-      doc.text(`Numéro de licence : ${registration.license_number}`, 20, y);
+    if (reg.license_number) {
+      doc.text(`Numéro de licence : ${reg.license_number}`, 20, y);
       y += 7;
     }
     
-    doc.text(`Adresse : ${registration.address}`, 20, y);
+    doc.text(`Adresse : ${reg.address}`, 20, y);
     y += 7;
-    doc.text(`Code postal : ${registration.postal_code}`, 20, y);
-    doc.text(`Ville : ${registration.city}`, 100, y);
+    doc.text(`Code postal : ${reg.postal_code}`, 20, y);
+    doc.text(`Ville : ${reg.city}`, 100, y);
     y += 7;
-    doc.text(`Téléphone : ${registration.phone}`, 20, y);
+    doc.text(`Téléphone : ${reg.phone}`, 20, y);
     y += 7;
     
-    if (registration.phone_alt) {
-      doc.text(`Téléphone 2 : ${registration.phone_alt}`, 20, y);
+    if (reg.phone_alt) {
+      doc.text(`Téléphone 2 : ${reg.phone_alt}`, 20, y);
       y += 7;
     }
     
-    doc.text(`Email : ${registration.email}`, 20, y);
+    doc.text(`Email : ${reg.email}`, 20, y);
     y += 7;
-    doc.text(`Numéro de sécurité sociale : ${registration.social_security_number}`, 20, y);
+    doc.text(`Numéro de sécurité sociale : ${reg.social_security_number}`, 20, y);
     y += 12;
     
     // RESPONSABLE LÉGAL
-    if (!registration.is_self_registration && registration.guardian_first_name) {
+    if (!reg.is_self_registration && reg.guardian_first_name) {
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
       doc.text("RESPONSABLE LÉGAL", 20, y);
@@ -109,18 +112,18 @@ export async function GET(
       doc.setFontSize(11);
       doc.setFont("helvetica", "normal");
       
-      doc.text(`Nom : ${registration.guardian_last_name}`, 20, y);
+      doc.text(`Nom : ${reg.guardian_last_name}`, 20, y);
       y += 7;
-      doc.text(`Prénom : ${registration.guardian_first_name}`, 20, y);
+      doc.text(`Prénom : ${reg.guardian_first_name}`, 20, y);
       y += 7;
-      doc.text(`Adresse : ${registration.guardian_address}`, 20, y);
+      doc.text(`Adresse : ${reg.guardian_address}`, 20, y);
       y += 7;
-      doc.text(`Code postal : ${registration.guardian_postal_code}`, 20, y);
-      doc.text(`Ville : ${registration.guardian_city}`, 100, y);
+      doc.text(`Code postal : ${reg.guardian_postal_code}`, 20, y);
+      doc.text(`Ville : ${reg.guardian_city}`, 100, y);
       y += 7;
-      doc.text(`Téléphone : ${registration.guardian_phone}`, 20, y);
+      doc.text(`Téléphone : ${reg.guardian_phone}`, 20, y);
       y += 7;
-      doc.text(`Email : ${registration.guardian_email}`, 20, y);
+      doc.text(`Email : ${reg.guardian_email}`, 20, y);
       y += 12;
     } else {
       doc.setFontSize(11);
@@ -130,7 +133,7 @@ export async function GET(
     }
     
     // INFORMATIONS MÉDICALES
-    if (registration.medical_note) {
+    if (reg.medical_note) {
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
       doc.text("INFORMATIONS MÉDICALES", 20, y);
@@ -139,7 +142,7 @@ export async function GET(
       doc.setFontSize(11);
       doc.setFont("helvetica", "normal");
       
-      const splitNote = doc.splitTextToSize(registration.medical_note, 170);
+      const splitNote = doc.splitTextToSize(reg.medical_note, 170);
       doc.text(splitNote, 20, y);
       y += splitNote.length * 7 + 5;
     }
@@ -154,16 +157,16 @@ export async function GET(
     doc.setFont("helvetica", "normal");
     
     const paymentMethodLabel = 
-      registration.payment_method === "carte" ? "Carte bancaire (en ligne)" :
-      registration.payment_method === "cheque" ? "Chèque" :
+      reg.payment_method === "carte" ? "Carte bancaire (en ligne)" :
+      reg.payment_method === "cheque" ? "Chèque" :
       "Espèces";
     
     doc.text(`Mode de paiement : ${paymentMethodLabel}`, 20, y);
     y += 7;
     
     const paymentStatusLabel = 
-      registration.payment_status === "paid" ? "Payé ✓" :
-      registration.payment_status === "pending" ? "En attente" :
+      reg.payment_status === "paid" ? "Payé ✓" :
+      reg.payment_status === "pending" ? "En attente" :
       "Annulé";
     
     doc.text(`Statut : ${paymentStatusLabel}`, 20, y);
@@ -181,7 +184,7 @@ export async function GET(
     return new NextResponse(pdfBuffer, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="inscription-${registration.last_name}-${registration.first_name}.pdf"`,
+        "Content-Disposition": `attachment; filename="inscription-${reg.last_name}-${reg.first_name}.pdf"`,
       },
     });
   } catch (error) {

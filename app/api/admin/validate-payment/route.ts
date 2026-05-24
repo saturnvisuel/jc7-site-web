@@ -18,8 +18,8 @@ export async function POST(request: NextRequest) {
 
     const { registrationId, paymentDate, paymentNote } = await request.json();
 
-    const { error } = await supabase
-      .from("registrations")
+    const { error } = await (supabase
+      .from("registrations") as any)
       .update({
         payment_status: "paid",
       })

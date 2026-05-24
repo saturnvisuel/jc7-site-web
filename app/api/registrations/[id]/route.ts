@@ -27,8 +27,8 @@ export async function PATCH(
   try {
     const body = await request.json();
 
-    const { error } = await supabaseAdmin
-      .from("registrations")
+    const { error } = await (supabaseAdmin
+      .from("registrations") as any)
       .update(body)
       .eq("id", params.id);
 

@@ -57,8 +57,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = registrationSchema.parse(body);
 
-    const { data: registration, error: dbError } = await supabaseAdmin
-      .from("registrations")
+    const { data: registration, error: dbError } = await (supabaseAdmin
+      .from("registrations") as any)
       .insert({
         ...validatedData,
         payment_status: "pending",
@@ -109,8 +109,8 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        await supabaseAdmin
-          .from("registrations")
+        await (supabaseAdmin
+          .from("registrations") as any)
           .update({ stripe_session_id: session.id })
           .eq("id", registration.id);
 
