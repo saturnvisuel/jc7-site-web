@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useState, useEffect, useRef } from "react";
+import { useForm, useFieldArray, type FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { calculateCategory, CATEGORIES, getTarif, getCategoryLabel } from "@/lib/categories";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import { RGPDConsent } from "@/components/rgpd-consent";
+import { FormStepper } from "@/components/ui/form-stepper";
 import { createClient } from "@/lib/supabase/client";
 
 const childSchema = z.object({
@@ -53,7 +54,29 @@ const familyRegistrationSchema = z.object({
 
 type FamilyRegistrationFormData = z.infer<typeof familyRegistrationSchema>;
 
+const STEPS = [
+  { title: "Responsable légal", description: "Vos coordonnées" },
+  { title: "Enfants", description: "Un bloc par enfant à inscrire" },
+  { title: "Paiement", description: "Récapitulatif et validation" },
+];
+
+/** Champs à valider avant de passer à l'étape suivante. */
+const STEP_FIELDS: FieldPath<FamilyRegistrationFormData>[][] = [
+  [
+    "guardianLastName",
+    "guardianFirstName",
+    "guardianAddress",
+    "guardianPostalCode",
+    "guardianCity",
+    "guardianPhone",
+    "guardianEmail",
+  ],
+  ["children"],
+  ["paymentMethod"],
+];
+
 export function RegistrationFormFamily() {
+  const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -61,6 +84,9 @@ export function RegistrationFormFamily() {
   const [rgpdConsent, setRgpdConsent] = useState(false);
   const [medicalCertificates, setMedicalCertificates] = useState<{[key: number]: File}>({});
   const [uploadingFiles, setUploadingFiles] = useState(false);
+  const topRef = useRef<HTMLDivElement>(null);
+
+  const isLastStep = step === STEPS.length - 1;
 
   const {
     register,
@@ -69,8 +95,10 @@ export function RegistrationFormFamily() {
     setValue,
     watch,
     control,
+    trigger,
   } = useForm<FamilyRegistrationFormData>({
     resolver: zodResolver(familyRegistrationSchema),
+    mode: "onTouched",
     defaultValues: {
       children: [
         {
@@ -109,6 +137,21 @@ export function RegistrationFormFamily() {
       }
     });
   }, [children.map(c => c.birthDate).join(','), setValue]);
+
+  const goToStep = (target: number) => {
+    setStep(target);
+    setError(null);
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handleNext = async () => {
+    const valid = await trigger(STEP_FIELDS[step], { shouldFocus: true });
+    if (!valid) {
+      setError("Veuillez corriger les champs en rouge avant de continuer.");
+      return;
+    }
+    goToStep(Math.min(step + 1, STEPS.length - 1));
+  };
 
   const calculateTotal = () => {
     let childCount = 0;
@@ -302,15 +345,29 @@ export function RegistrationFormFamily() {
     );
   }
 
+  const onFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    if (!isLastStep) {
+      event.preventDefault();
+      handleNext();
+      return;
+    }
+    handleSubmit(onSubmit)(event);
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 max-w-4xl mx-auto">
+    <form onSubmit={onFormSubmit} className="space-y-8 max-w-4xl mx-auto">
+      <div ref={topRef} className="scroll-mt-24" />
+
+      <FormStepper steps={STEPS} current={step} onStepClick={goToStep} />
+
       {error && (
-        <div className="bg-red-50 border-l-4 border-red-600 p-4 rounded">
+        <div role="alert" className="bg-red-50 border-l-4 border-red-600 p-4 rounded">
           <p className="text-red-800">{error}</p>
         </div>
       )}
 
-      {/* RESPONSABLE LÉGAL */}
+      {/* ÉTAPE 1 — RESPONSABLE LÉGAL */}
+      {step === 0 && (
       <div className="bg-white p-6 rounded-lg shadow-sm border">
         <h2 className="text-xl font-bold mb-6 text-primary">Responsable légal</h2>
         
@@ -408,8 +465,10 @@ export function RegistrationFormFamily() {
           </div>
         </div>
       </div>
+      )}
 
-      {/* ENFANTS */}
+      {/* ÉTAPE 2 — ENFANTS */}
+      {step === 1 && (
       <div className="bg-white p-6 rounded-lg shadow-sm border">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-primary">Enfants à inscrire</h2>
@@ -617,16 +676,48 @@ export function RegistrationFormFamily() {
               <br />
               • 1er enfant : tarif normal
               <br />
-              • 2ème enfant : 165 €
+              • 2ème enfant : 185 €
               <br />
-              • 3ème enfant et plus : 150 €
+              • 3ème enfant et plus : 170 €
             </p>
           </div>
         )}
       </div>
+      )}
 
-      {/* PAIEMENT */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
+      {/* ÉTAPE 3 — RÉCAPITULATIF ET PAIEMENT */}
+      {step === 2 && (
+      <div className="space-y-6">
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <h2 className="text-xl font-bold mb-4 text-primary">Récapitulatif</h2>
+          <dl className="divide-y text-sm">
+            {children.map((child, index) => (
+              <div key={index} className="flex justify-between gap-4 py-2">
+                <dt className="text-muted-foreground">
+                  {child.firstName} {child.lastName}
+                  {child.category && (
+                    <span className="block text-xs">{getCategoryLabel(child.category)}</span>
+                  )}
+                </dt>
+                <dd className="font-medium whitespace-nowrap">{getChildTarif(index)} €</dd>
+              </div>
+            ))}
+            <div className="flex items-baseline justify-between gap-4 py-3">
+              <dt className="font-semibold">Total à régler</dt>
+              <dd className="text-2xl font-black text-red-600">{calculateTotal()} €</dd>
+            </div>
+          </dl>
+          <Button
+            type="button"
+            variant="link"
+            className="h-auto p-0 text-sm"
+            onClick={() => goToStep(1)}
+          >
+            Modifier les enfants
+          </Button>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
         <h2 className="text-xl font-bold mb-6 text-primary">Mode de paiement</h2>
 
         <div className="space-y-4">
@@ -684,23 +775,47 @@ export function RegistrationFormFamily() {
             <p className="text-sm text-destructive">{errors.paymentMethod.message}</p>
           )}
         </div>
+        </div>
+
+        <RGPDConsent
+          checked={rgpdConsent}
+          onCheckedChange={setRgpdConsent}
+          error={error && !rgpdConsent ? "Consentement requis" : undefined}
+        />
       </div>
+      )}
 
-      {/* CONSENTEMENT RGPD */}
-      <RGPDConsent
-        checked={rgpdConsent}
-        onCheckedChange={setRgpdConsent}
-        error={error && !rgpdConsent ? "Consentement requis" : undefined}
-      />
+      {/* NAVIGATION */}
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          onClick={() => goToStep(step - 1)}
+          disabled={step === 0 || isSubmitting}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Précédent
+        </Button>
 
-      <Button
-        type="submit"
-        disabled={isSubmitting}
-        className="w-full"
-        size="lg"
-      >
-        {isSubmitting ? "Inscription en cours..." : `Valider les inscriptions (${calculateTotal()} €)`}
-      </Button>
+        {isLastStep ? (
+          <Button type="submit" size="lg" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {uploadingFiles ? "Envoi des certificats..." : "Inscription en cours..."}
+              </>
+            ) : (
+              `Valider les inscriptions (${calculateTotal()} €)`
+            )}
+          </Button>
+        ) : (
+          <Button type="button" size="lg" onClick={handleNext}>
+            Continuer
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        )}
+      </div>
     </form>
   );
 }

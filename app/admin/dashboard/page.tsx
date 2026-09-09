@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Users, CheckCircle, Clock, XCircle, Euro } from "lucide-react";
+import { Users, CheckCircle, Clock, XCircle, Euro, FileText } from "lucide-react";
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -121,6 +121,12 @@ export default async function DashboardPage() {
               <Link href="/admin/paiements">
                 <Euro className="mr-2 h-4 w-4" />
                 Gestion des paiements
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/admin/contenu">
+                <FileText className="mr-2 h-4 w-4" />
+                Contenu du site
               </Link>
             </Button>
             <Button variant="outline" asChild>

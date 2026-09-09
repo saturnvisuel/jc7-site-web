@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useState, useEffect, useRef } from "react";
+import { useForm, type FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { calculateCategory, CATEGORIES, getTarif, getCategoryLabel } from "@/lib/categories";
 import { RGPDConsent } from "@/components/rgpd-consent";
+import { FormStepper } from "@/components/ui/form-stepper";
 import { createClient } from "@/lib/supabase/client";
+import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 
 const registrationSchema = z.object({
   // Informations du pratiquant
@@ -76,7 +78,25 @@ const registrationSchema = z.object({
 
 type RegistrationFormData = z.infer<typeof registrationSchema>;
 
+const STEPS = [
+  { title: "Le pratiquant", description: "Identité et niveau" },
+  { title: "Coordonnées", description: "Adresse et contact" },
+  { title: "Responsable légal", description: "Obligatoire pour les mineurs" },
+  { title: "Médical", description: "Certificat et informations de santé" },
+  { title: "Paiement", description: "Récapitulatif et validation" },
+];
+
+/** Champs à valider avant de passer à l'étape suivante. */
+const STEP_FIELDS: FieldPath<RegistrationFormData>[][] = [
+  ["lastName", "firstName", "birthDate", "category", "licenseNumber"],
+  ["address", "postalCode", "city", "phone", "email", "socialSecurityNumber"],
+  ["guardianFirstName"],
+  [],
+  ["paymentMethod"],
+];
+
 export function RegistrationForm() {
+  const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -84,6 +104,9 @@ export function RegistrationForm() {
   const [rgpdConsent, setRgpdConsent] = useState(false);
   const [medicalCertificateFile, setMedicalCertificateFile] = useState<File | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const topRef = useRef<HTMLDivElement>(null);
+
+  const isLastStep = step === STEPS.length - 1;
 
   const {
     register,
@@ -91,8 +114,10 @@ export function RegistrationForm() {
     formState: { errors },
     setValue,
     watch,
+    trigger,
   } = useForm<RegistrationFormData>({
     resolver: zodResolver(registrationSchema),
+    mode: "onTouched",
     defaultValues: {
       isSelfRegistration: false,
     },
@@ -112,6 +137,29 @@ export function RegistrationForm() {
       }
     }
   }, [birthDate, setValue]);
+
+  const goToStep = (target: number) => {
+    setStep(target);
+    setError(null);
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handleNext = async () => {
+    const fields = STEP_FIELDS[step];
+
+    // L'étape "responsable légal" n'a rien à valider si l'inscription est pour soi-même.
+    const shouldValidate = !(step === 2 && isSelfRegistration) && fields.length > 0;
+
+    if (shouldValidate) {
+      const valid = await trigger(fields, { shouldFocus: true });
+      if (!valid) {
+        setError("Veuillez corriger les champs en rouge avant de continuer.");
+        return;
+      }
+    }
+
+    goToStep(Math.min(step + 1, STEPS.length - 1));
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -238,11 +286,71 @@ export function RegistrationForm() {
     }
   };
 
+  const onFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    if (!isLastStep) {
+      event.preventDefault();
+      handleNext();
+      return;
+    }
+    handleSubmit(onSubmit)(event);
+  };
+
+  if (success && registrationId) {
+    return (
+      <div className="p-6 bg-green-50 border-l-4 border-green-600 rounded space-y-4">
+        <div>
+          <p className="text-green-800 font-semibold text-lg">✓ Inscription enregistrée avec succès !</p>
+          <p className="text-sm text-green-700 mt-2">
+            Vous recevrez un email de confirmation.
+            {paymentMethod === "cheque" && " N'oubliez pas d'apporter votre chèque lors de votre première séance."}
+            {paymentMethod === "especes" && " N'oubliez pas d'apporter le montant en espèces lors de votre première séance."}
+          </p>
+        </div>
+
+        <div className="pt-2 border-t border-green-200">
+          <p className="text-sm text-green-800 font-medium mb-3">Téléchargez votre reçu d&apos;inscription :</p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              type="button"
+              className="flex-1 bg-green-600 hover:bg-green-700"
+              onClick={() => window.open(`/api/registrations/${registrationId}/receipt`, "_blank")}
+            >
+              Télécharger le reçu PDF
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={() => (window.location.href = "/")}
+            >
+              Retour à l&apos;accueil
+            </Button>
+          </div>
+          <p className="text-xs text-green-600 mt-2 text-center">
+            Ce document contient toutes les informations de votre inscription et le montant à régler
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-      {/* INFORMATIONS DU PRATIQUANT */}
+    <form onSubmit={onFormSubmit} className="space-y-8">
+      <div ref={topRef} className="scroll-mt-24" />
+
+      <FormStepper steps={STEPS} current={step} onStepClick={goToStep} />
+
+      {error && (
+        <div role="alert" className="rounded-md bg-destructive/10 p-4 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+
+      {/* ÉTAPE 1 — LE PRATIQUANT */}
+      {step === 0 && (
       <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h2 className="text-xl font-bold mb-6 text-primary">Informations du pratiquant</h2>
+        <h2 className="text-xl font-bold mb-1 text-primary">Informations du pratiquant</h2>
+        <p className="mb-6 text-sm text-muted-foreground">Identité, catégorie et niveau</p>
         
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -346,7 +454,17 @@ export function RegistrationForm() {
               Pour les anciens licenciés uniquement. Format: MJJMMAAAANNNNNXX
             </p>
           </div>
+        </div>
+      </div>
+      )}
 
+      {/* ÉTAPE 2 — COORDONNÉES */}
+      {step === 1 && (
+      <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <h2 className="text-xl font-bold mb-1 text-primary">Coordonnées</h2>
+        <p className="mb-6 text-sm text-muted-foreground">Adresse et moyens de contact</p>
+
+        <div className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="address">Adresse *</Label>
             <Input
@@ -436,8 +554,10 @@ export function RegistrationForm() {
           </div>
         </div>
       </div>
+      )}
 
-      {/* RESPONSABLE LÉGAL */}
+      {/* ÉTAPE 3 — RESPONSABLE LÉGAL */}
+      {step === 2 && (
       <div className="bg-white p-6 rounded-lg shadow-sm border">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-primary">Responsable légal</h2>
@@ -532,13 +652,15 @@ export function RegistrationForm() {
         {isSelfRegistration && (
           <div className="p-4 bg-blue-50 border-l-4 border-blue-600 rounded">
             <p className="text-sm text-blue-800">
-              ℹ️ Vos informations personnelles seront utilisées comme responsable légal.
+              Vos informations personnelles seront utilisées comme responsable légal.
             </p>
           </div>
         )}
       </div>
+      )}
 
-      {/* INFORMATIONS MÉDICALES */}
+      {/* ÉTAPE 4 — INFORMATIONS MÉDICALES */}
+      {step === 3 && (
       <div className="bg-white p-6 rounded-lg shadow-sm border">
         <h2 className="text-xl font-bold mb-6 text-primary">Informations médicales</h2>
         
@@ -582,9 +704,54 @@ export function RegistrationForm() {
           </div>
         </div>
       </div>
+      )}
 
-      {/* MODE DE PAIEMENT */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
+      {/* ÉTAPE 5 — RÉCAPITULATIF ET PAIEMENT */}
+      {step === 4 && (
+      <div className="space-y-6">
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <h2 className="text-xl font-bold mb-4 text-primary">Récapitulatif</h2>
+          <dl className="divide-y text-sm">
+            <div className="flex justify-between gap-4 py-2">
+              <dt className="text-muted-foreground">Pratiquant</dt>
+              <dd className="font-medium text-right">
+                {watch("firstName")} {watch("lastName")}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4 py-2">
+              <dt className="text-muted-foreground">Catégorie</dt>
+              <dd className="font-medium text-right">
+                {category ? getCategoryLabel(category) : "—"}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4 py-2">
+              <dt className="text-muted-foreground">Email</dt>
+              <dd className="font-medium text-right break-all">{watch("email")}</dd>
+            </div>
+            <div className="flex justify-between gap-4 py-2">
+              <dt className="text-muted-foreground">Certificat médical</dt>
+              <dd className="font-medium text-right">
+                {medicalCertificateFile ? medicalCertificateFile.name : "Non fourni"}
+              </dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-4 py-3">
+              <dt className="font-semibold">Montant à régler</dt>
+              <dd className="text-2xl font-black text-red-600">
+                {category ? `${getTarif(category)} €` : "—"}
+              </dd>
+            </div>
+          </dl>
+          <Button
+            type="button"
+            variant="link"
+            className="h-auto p-0 text-sm"
+            onClick={() => goToStep(0)}
+          >
+            Modifier mes informations
+          </Button>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
         <h2 className="text-xl font-bold mb-6 text-primary">Mode de paiement</h2>
         
         <div className="space-y-2">
@@ -612,66 +779,49 @@ export function RegistrationForm() {
             </div>
           )}
         </div>
+        </div>
+
+        <RGPDConsent
+          checked={rgpdConsent}
+          onCheckedChange={setRgpdConsent}
+          error={error && !rgpdConsent ? "Consentement requis" : undefined}
+        />
       </div>
-
-      {/* MESSAGES */}
-      {success && registrationId && (
-        <div className="p-6 bg-green-50 border-l-4 border-green-600 rounded space-y-4">
-          <div>
-            <p className="text-green-800 font-semibold text-lg">✓ Inscription enregistrée avec succès !</p>
-            <p className="text-sm text-green-700 mt-2">
-              Vous recevrez un email de confirmation. 
-              {paymentMethod === "cheque" && " N'oubliez pas d'apporter votre chèque lors de votre première séance."}
-              {paymentMethod === "especes" && " N'oubliez pas d'apporter le montant en espèces lors de votre première séance."}
-            </p>
-          </div>
-          
-          <div className="pt-2 border-t border-green-200">
-            <p className="text-sm text-green-800 font-medium mb-3">📄 Téléchargez votre reçu d'inscription :</p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                type="button"
-                variant="default"
-                className="flex-1 bg-green-600 hover:bg-green-700"
-                onClick={() => window.open(`/api/registrations/${registrationId}/receipt`, '_blank')}
-              >
-                📥 Télécharger le reçu PDF
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => window.location.href = '/'}
-              >
-                🏠 Retour à l'accueil
-              </Button>
-            </div>
-            <p className="text-xs text-green-600 mt-2 text-center">
-              Ce document contient toutes les informations de votre inscription et le montant à régler
-            </p>
-          </div>
-        </div>
       )}
 
-      {error && (
-        <div className="p-4 bg-destructive/10 text-destructive rounded-md">
-          {error}
-        </div>
-      )}
+      {/* NAVIGATION */}
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          onClick={() => goToStep(step - 1)}
+          disabled={step === 0 || isSubmitting}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Précédent
+        </Button>
 
-      {/* CONSENTEMENT RGPD */}
-      <RGPDConsent
-        checked={rgpdConsent}
-        onCheckedChange={setRgpdConsent}
-        error={error && !rgpdConsent ? "Consentement requis" : undefined}
-      />
-
-      {/* BOUTON DE SOUMISSION */}
-      <Button type="submit" className="w-full" size="lg" disabled={isSubmitting || success}>
-        {isSubmitting ? "Traitement en cours..." : 
-         paymentMethod === "carte" ? "Continuer vers le paiement" : 
-         "Valider mon inscription"}
-      </Button>
+        {isLastStep ? (
+          <Button type="submit" size="lg" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {uploadingFile ? "Envoi du certificat..." : "Traitement en cours..."}
+              </>
+            ) : paymentMethod === "carte" ? (
+              "Continuer vers le paiement"
+            ) : (
+              "Valider mon inscription"
+            )}
+          </Button>
+        ) : (
+          <Button type="button" size="lg" onClick={handleNext}>
+            Continuer
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        )}
+      </div>
 
       <p className="text-sm text-muted-foreground text-center">
         * Champs obligatoires

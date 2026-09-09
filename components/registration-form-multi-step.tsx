@@ -36,10 +36,10 @@ const registrationSchema = z.object({
 type RegistrationFormData = z.infer<typeof registrationSchema>;
 
 const categories = [
-  { value: "baby", label: "Baby Judo", age: "4-6 ans", price: "180€/an", icon: "👶", color: "orange" },
-  { value: "enfants", label: "Judo Enfants", age: "7-13 ans", price: "220€/an", icon: "🥋", color: "indigo" },
-  { value: "ados-adultes", label: "Ados/Adultes", age: "14 ans et +", price: "250€/an", icon: "🥷", color: "red" },
-  { value: "loisir", label: "Judo Loisir", age: "Adultes", price: "200€/an", icon: "❤️", color: "emerald" },
+  { value: "baby", label: "Baby Judo", age: "4-5 ans", price: "150€/an", icon: "👶", color: "orange" },
+  { value: "mini-poussin", label: "Mini-Poussins/Poussins", age: "6-9 ans", price: "200€/an", icon: "🥋", color: "indigo" },
+  { value: "benjamin", label: "Benjamins", age: "10-11 ans", price: "200€/an", icon: "🥋", color: "indigo" },
+  { value: "minime", label: "Minimes/Cadets/Juniors/Seniors", age: "12 ans et +", price: "200€/an", icon: "🥷", color: "red" },
 ];
 
 const levels = [

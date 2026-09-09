@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/navbar";
+import { ScrollToTop } from "@/components/scroll-to-top";
+import { CLUB_INFO } from "@/lib/club-info";
 import { MapPin, Phone, Mail, Clock, Facebook, Instagram, ChevronDown } from "lucide-react";
 
 export default function ContactPage() {
@@ -60,7 +62,7 @@ export default function ContactPage() {
     },
     {
       question: "Quels sont les tarifs d'inscription ?",
-      answer: "Nos tarifs sont de 130€/an pour le Baby Judo (4-5 ans) et 180€/an pour toutes les autres catégories (Poussins, Benjamins, Minimes, Cadets, Juniors, Seniors). La licence FFJudo est incluse dans le tarif. Paiement en plusieurs fois possible.",
+      answer: "Nos tarifs sont de 150€/an pour le Baby Judo (4-5 ans) et 200€/an pour toutes les autres catégories (Poussins, Benjamins, Minimes, Cadets, Juniors, Seniors). La licence FFJudo est incluse dans le tarif. Paiement en plusieurs fois possible.",
     },
     {
       question: "À partir de quel âge peut-on pratiquer le judo ?",
@@ -72,13 +74,14 @@ export default function ContactPage() {
     },
     {
       question: "Quels sont les horaires des cours ?",
-      answer: "Lundi : 17h-18h (Benjamins/Minimes débutants). Mardi : 17h-21h (Poussins, Benjamins/Minimes confirmés, Cadets/Juniors/Seniors). Mercredi : 15h-16h (Poussins), 17h30-19h30 (Baby Judo). Jeudi : 17h-18h (Benjamins/Minimes débutants). Vendredi : 17h-21h (Poussins, Benjamins/Minimes confirmés, Cadets/Juniors/Seniors). Samedi : 13h-15h (Préparation physique). Consultez notre page 'Cours & Horaires' pour le planning complet.",
+      answer: "Lundi : 17h-18h (Mini-Poussins/Poussins débutants). Mardi : 17h-18h (Mini-Poussins/Poussins confirmés), 18h-19h (Benjamins), 19h-20h30 (Minimes/Cadets/Juniors/Seniors). Mercredi : 17h30-18h30 (Babies 1), 18h30-19h30 (Babies 2), 19h-21h (Jujitsu, site Jean Villard). Jeudi : 17h-18h (Mini-Poussins/Poussins débutants), 19h-21h (Jujitsu, site Jean Villard). Vendredi : 17h-18h (Mini-Poussins/Poussins confirmés), 18h-19h (Benjamins), 19h-20h30 (Minimes/Cadets/Juniors/Seniors). Consultez notre page 'Cours & Horaires' pour le planning complet.",
     },
   ];
 
   return (
     <main className="min-h-screen bg-white">
       <Navbar />
+      <ScrollToTop />
 
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-red-600 via-red-500 to-red-700 text-white py-16 sm:py-20 md:py-24">
@@ -334,15 +337,19 @@ export default function ContactPage() {
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <a
-                    href="#"
-                    className="flex items-center justify-center bg-blue-600 text-white px-6 py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-md"
+                    href={CLUB_INFO.facebook}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center bg-blue-600 text-white px-6 py-4 rounded-lg font-semibold hover:bg-blue-700 hover:scale-105 transition-all shadow-md"
                   >
                     <Facebook className="w-6 h-6 mr-2" />
                     Facebook
                   </a>
                   <a
-                    href="#"
-                    className="flex items-center justify-center bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-4 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-colors shadow-md"
+                    href={CLUB_INFO.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-4 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 hover:scale-105 transition-all shadow-md"
                   >
                     <Instagram className="w-6 h-6 mr-2" />
                     Instagram
@@ -416,7 +423,11 @@ export default function ContactPage() {
                     className={`text-gray-500 transition-transform ${openFaq === index ? "rotate-180" : ""}`}
                   />
                 </button>
-                {openFaq === index && <div className="px-6 pb-4 text-gray-600">{faq.answer}</div>}
+                {openFaq === index && (
+                  <div className="px-6 pb-4 text-gray-600 animate-in fade-in slide-in-from-top-1 duration-200">
+                    {faq.answer}
+                  </div>
+                )}
               </div>
             ))}
           </div>

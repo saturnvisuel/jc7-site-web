@@ -55,44 +55,44 @@ describe('calculateCategory', () => {
 });
 
 describe('getTarif', () => {
-  it('devrait retourner 130€ pour baby', () => {
-    expect(getTarif('baby')).toBe(130);
+  it('devrait retourner 150€ pour baby', () => {
+    expect(getTarif('baby')).toBe(150);
   });
 
-  it('devrait retourner 180€ pour mini-poussin', () => {
-    expect(getTarif('mini-poussin')).toBe(180);
+  it('devrait retourner 200€ pour mini-poussin', () => {
+    expect(getTarif('mini-poussin')).toBe(200);
   });
 
-  it('devrait retourner 180€ pour senior', () => {
-    expect(getTarif('senior')).toBe(180);
+  it('devrait retourner 200€ pour senior', () => {
+    expect(getTarif('senior')).toBe(200);
   });
 
-  it('devrait retourner 165€ pour le 2ème enfant', () => {
-    expect(getTarif('poussin', 2)).toBe(165);
+  it('devrait retourner 185€ pour le 2ème enfant', () => {
+    expect(getTarif('poussin', 2)).toBe(185);
   });
 
-  it('devrait retourner 130€ pour le 2ème baby (pas de réduction)', () => {
-    expect(getTarif('baby', 2)).toBe(130);
+  it('devrait retourner 150€ pour le 2ème baby (pas de réduction)', () => {
+    expect(getTarif('baby', 2)).toBe(150);
   });
 
-  it('devrait retourner 150€ pour le 3ème enfant', () => {
-    expect(getTarif('benjamin', 3)).toBe(150);
+  it('devrait retourner 170€ pour le 3ème enfant', () => {
+    expect(getTarif('benjamin', 3)).toBe(170);
   });
 
-  it('devrait retourner 130€ pour le 3ème baby (pas de réduction)', () => {
-    expect(getTarif('baby', 3)).toBe(130);
+  it('devrait retourner 150€ pour le 3ème baby (pas de réduction)', () => {
+    expect(getTarif('baby', 3)).toBe(150);
   });
 
-  it('devrait retourner 150€ pour le 4ème enfant', () => {
-    expect(getTarif('minime', 4)).toBe(150);
+  it('devrait retourner 170€ pour le 4ème enfant', () => {
+    expect(getTarif('minime', 4)).toBe(170);
   });
 
   it('ne devrait pas appliquer de réduction aux seniors même si 2ème enfant', () => {
-    expect(getTarif('senior', 2)).toBe(180);
+    expect(getTarif('senior', 2)).toBe(200);
   });
 
-  it('devrait retourner 180€ par défaut pour une catégorie inconnue', () => {
-    expect(getTarif('unknown')).toBe(180);
+  it('devrait retourner 200€ par défaut pour une catégorie inconnue', () => {
+    expect(getTarif('unknown')).toBe(200);
   });
 });
 
@@ -122,7 +122,7 @@ describe('calculateFamilyDiscount', () => {
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({
       category: 'poussin',
-      tarif: 180,
+      tarif: 200,
       childNumber: 1,
     });
   });
@@ -135,8 +135,8 @@ describe('calculateFamilyDiscount', () => {
     const result = calculateFamilyDiscount(registrations);
 
     expect(result).toHaveLength(2);
-    expect(result[0].tarif).toBe(180); // 1er enfant
-    expect(result[1].tarif).toBe(165); // 2ème enfant
+    expect(result[0].tarif).toBe(200); // 1er enfant
+    expect(result[1].tarif).toBe(185); // 2ème enfant
   });
 
   it('devrait calculer correctement pour 3 enfants', () => {
@@ -148,9 +148,9 @@ describe('calculateFamilyDiscount', () => {
     const result = calculateFamilyDiscount(registrations);
 
     expect(result).toHaveLength(3);
-    expect(result[0].tarif).toBe(180); // 1er enfant
-    expect(result[1].tarif).toBe(165); // 2ème enfant
-    expect(result[2].tarif).toBe(150); // 3ème enfant
+    expect(result[0].tarif).toBe(200); // 1er enfant
+    expect(result[1].tarif).toBe(185); // 2ème enfant
+    expect(result[2].tarif).toBe(170); // 3ème enfant
   });
 
   it('devrait mettre les seniors à la fin et ne pas leur appliquer de réduction', () => {
@@ -163,11 +163,11 @@ describe('calculateFamilyDiscount', () => {
 
     expect(result).toHaveLength(3);
     expect(result[0].category).toBe('poussin'); // Enfant 1
-    expect(result[0].tarif).toBe(180);
+    expect(result[0].tarif).toBe(200);
     expect(result[1].category).toBe('baby'); // Enfant 2
-    expect(result[1].tarif).toBe(165);
+    expect(result[1].tarif).toBe(185);
     expect(result[2].category).toBe('senior'); // Adulte
-    expect(result[2].tarif).toBe(180);
+    expect(result[2].tarif).toBe(200);
     expect(result[2].childNumber).toBe(0);
   });
 
@@ -181,10 +181,10 @@ describe('calculateFamilyDiscount', () => {
     const result = calculateFamilyDiscount(registrations);
 
     expect(result).toHaveLength(4);
-    expect(result[0].tarif).toBe(180); // 1er
-    expect(result[1].tarif).toBe(165); // 2ème
-    expect(result[2].tarif).toBe(150); // 3ème
-    expect(result[3].tarif).toBe(150); // 4ème
+    expect(result[0].tarif).toBe(200); // 1er
+    expect(result[1].tarif).toBe(185); // 2ème
+    expect(result[2].tarif).toBe(170); // 3ème
+    expect(result[3].tarif).toBe(170); // 4ème
   });
 });
 
@@ -208,16 +208,16 @@ describe('CATEGORIES', () => {
 
 describe('TARIFS', () => {
   it('devrait avoir le bon tarif pour baby', () => {
-    expect(TARIFS.baby).toBe(130);
+    expect(TARIFS.baby).toBe(150);
   });
 
-  it('devrait avoir 180€ pour toutes les autres catégories', () => {
-    expect(TARIFS['mini-poussin']).toBe(180);
-    expect(TARIFS.poussin).toBe(180);
-    expect(TARIFS.benjamin).toBe(180);
-    expect(TARIFS.minime).toBe(180);
-    expect(TARIFS.cadet).toBe(180);
-    expect(TARIFS.junior).toBe(180);
-    expect(TARIFS.senior).toBe(180);
+  it('devrait avoir 200€ pour toutes les autres catégories', () => {
+    expect(TARIFS['mini-poussin']).toBe(200);
+    expect(TARIFS.poussin).toBe(200);
+    expect(TARIFS.benjamin).toBe(200);
+    expect(TARIFS.minime).toBe(200);
+    expect(TARIFS.cadet).toBe(200);
+    expect(TARIFS.junior).toBe(200);
+    expect(TARIFS.senior).toBe(200);
   });
 });

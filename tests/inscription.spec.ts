@@ -39,7 +39,7 @@ test.describe('Formulaire d\'inscription simple', () => {
 
     const categoryInput = page.locator('input[id="category"]');
     await expect(categoryInput).toHaveValue(/Baby Judo/);
-    await expect(page.getByText('Montant : 130 €')).toBeVisible();
+    await expect(page.getByText('Montant : 150 €')).toBeVisible();
   });
 
   test('devrait calculer automatiquement la catégorie pour un poussin', async ({ page }) => {
@@ -47,7 +47,7 @@ test.describe('Formulaire d\'inscription simple', () => {
 
     const categoryInput = page.locator('input[id="category"]');
     await expect(categoryInput).toHaveValue(/Poussins/);
-    await expect(page.getByText('Montant : 180 €')).toBeVisible();
+    await expect(page.getByText('Montant : 200 €')).toBeVisible();
   });
 
   test('devrait calculer automatiquement la catégorie pour un senior', async ({ page }) => {
@@ -55,7 +55,7 @@ test.describe('Formulaire d\'inscription simple', () => {
 
     const categoryInput = page.locator('input[id="category"]');
     await expect(categoryInput).toHaveValue(/Seniors/);
-    await expect(page.getByText('Montant : 180 €')).toBeVisible();
+    await expect(page.getByText('Montant : 200 €')).toBeVisible();
   });
 
   test('le champ catégorie devrait être désactivé', async ({ page }) => {
@@ -102,7 +102,7 @@ test.describe('Formulaire d\'inscription familiale', () => {
 
   test('devrait calculer le tarif pour chaque enfant', async ({ page }) => {
     await page.locator('input[name="children.0.birthDate"]').fill('2016-06-15');
-    await expect(page.getByText('Tarif pour cet enfant : 180 €')).toBeVisible();
+    await expect(page.getByText('Tarif pour cet enfant : 200 €')).toBeVisible();
 
     await page.getByRole('button', { name: /Ajouter un enfant/i }).click();
     await page.locator('input[name="children.1.birthDate"]').fill('2018-03-20');
@@ -131,8 +131,8 @@ test.describe('Formulaire d\'inscription familiale', () => {
 
     await expect(page.getByText(/Réductions familiales/)).toBeVisible();
     await expect(page.getByText(/1er enfant : tarif normal/)).toBeVisible();
-    await expect(page.getByText(/2ème enfant : 165 €/)).toBeVisible();
-    await expect(page.getByText(/3ème enfant et plus : 150 €/)).toBeVisible();
+    await expect(page.getByText(/2ème enfant : 185 €/)).toBeVisible();
+    await expect(page.getByText(/3ème enfant et plus : 170 €/)).toBeVisible();
   });
 });
 

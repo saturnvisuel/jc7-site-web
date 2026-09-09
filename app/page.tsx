@@ -1,13 +1,48 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Award, Users, Calendar, Shield } from "lucide-react";
+import {
+  Award,
+  Users,
+  Calendar,
+  Shield,
+  CalendarDays,
+  ArrowRight,
+  Facebook,
+  Instagram,
+} from "lucide-react";
 import { CLUB_INFO } from "@/lib/club-info";
 import { Navbar } from "@/components/navbar";
+import { Reveal } from "@/components/ui/reveal";
+import { Counter } from "@/components/ui/counter";
+import { ScrollProgress } from "@/components/scroll-progress";
+import { ScrollToTop } from "@/components/scroll-to-top";
+import { getGalleryImages, getProfessors, getPublishedNews, getScheduleSlots } from "@/lib/content";
+import { GalleryCarousel } from "@/components/gallery-carousel";
 
-export default function Home() {
+export const revalidate = 60;
+
+const STATS = [
+  { label: "Cours par semaine", suffix: "" },
+  { label: "Professeurs diplômés", suffix: "" },
+  { label: "À partir de", suffix: " ans" },
+  { label: "Années d'expérience", suffix: "+" },
+];
+
+export default async function Home() {
+  const [professors, slots, news, galleryImages] = await Promise.all([
+    getProfessors(),
+    getScheduleSlots(),
+    getPublishedNews(3),
+    getGalleryImages(),
+  ]);
+
+  const statValues = [slots.length, professors.length, 4, 20];
+
   return (
     <main className="min-h-screen bg-white">
+      <ScrollProgress />
       <Navbar />
+      <ScrollToTop />
 
       {/* Hero Section - Design amélioré */}
       <section className="relative overflow-hidden bg-gradient-to-br from-red-600 via-red-500 to-red-700 min-h-[70vh] sm:min-h-[80vh] md:min-h-[90vh] flex items-center">
@@ -19,18 +54,18 @@ export default function Home() {
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-20 relative z-10 w-full">
           <div className="text-center max-w-5xl mx-auto">
-            <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black tracking-tight text-white mb-4 sm:mb-6 drop-shadow-2xl">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black tracking-tight text-white mb-4 sm:mb-6 drop-shadow-2xl animate-in fade-in slide-in-from-bottom-6 duration-700">
               Judo Courneuvien 7
             </h1>
-            <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl text-white/95 mb-4 sm:mb-6 font-light">
+            <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl text-white/95 mb-4 sm:mb-6 font-light animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150">
               L'excellence du judo à La Courneuve
             </p>
-            <p className="text-base sm:text-lg md:text-xl text-white/90 mb-8 sm:mb-12 max-w-3xl mx-auto leading-relaxed px-4">
+            <p className="text-base sm:text-lg md:text-xl text-white/90 mb-8 sm:mb-12 max-w-3xl mx-auto leading-relaxed px-4 animate-in fade-in duration-700 delay-300">
               Rejoignez notre club affilié à la Fédération Française de Judo. 
               Des cours adaptés pour tous les âges, du baby judo aux adultes.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-4 animate-in fade-in duration-700 delay-500">
               <Button 
                 asChild 
                 size="lg" 
@@ -58,21 +93,39 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Chiffres clés */}
+      <section className="py-12 sm:py-16 bg-gray-50 border-y border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+            {STATS.map((stat, index) => (
+              <Reveal key={stat.label} delay={index * 100} className="text-center">
+                <p className="text-4xl sm:text-5xl font-black text-red-600">
+                  <Counter to={statValues[index]} suffix={stat.suffix} />
+                </p>
+                <p className="mt-2 text-sm sm:text-base font-medium text-gray-600">
+                  {stat.label}
+                </p>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Features Grid - Style Apple */}
       <section id="about" className="py-16 sm:py-24 md:py-32 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12 sm:mb-16 md:mb-20">
+          <Reveal className="text-center mb-12 sm:mb-16 md:mb-20">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 mb-3 sm:mb-4">
               Pourquoi choisir JC7 ?
             </h2>
             <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-2xl mx-auto px-4">
               Un club de judo moderne avec des valeurs traditionnelles
             </p>
-          </div>
+          </Reveal>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {/* Feature 1 */}
-            <div className="bg-white rounded-2xl p-8 text-center group hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 border border-gray-100">
+            <Reveal delay={0} className="bg-white rounded-2xl p-8 text-center group hover:shadow-2xl hover:-translate-y-2 border border-gray-100">
               <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 mb-6 group-hover:scale-110 transition-transform shadow-lg">
                 <Award className="w-10 h-10 text-white" />
               </div>
@@ -82,10 +135,10 @@ export default function Home() {
               <p className="text-gray-600 leading-relaxed">
                 Équipe diplômée d'État pour un enseignement de qualité
               </p>
-            </div>
+            </Reveal>
 
             {/* Feature 2 */}
-            <div className="bg-white rounded-2xl p-8 text-center group hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 border border-gray-100">
+            <Reveal delay={100} className="bg-white rounded-2xl p-8 text-center group hover:shadow-2xl hover:-translate-y-2 border border-gray-100">
               <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 mb-6 group-hover:scale-110 transition-transform shadow-lg">
                 <Users className="w-10 h-10 text-white" />
               </div>
@@ -95,10 +148,10 @@ export default function Home() {
               <p className="text-gray-600 leading-relaxed">
                 Du baby judo (4 ans) aux adultes, débutants ou confirmés
               </p>
-            </div>
+            </Reveal>
 
             {/* Feature 3 */}
-            <div className="bg-white rounded-2xl p-8 text-center group hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 border border-gray-100">
+            <Reveal delay={200} className="bg-white rounded-2xl p-8 text-center group hover:shadow-2xl hover:-translate-y-2 border border-gray-100">
               <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 mb-6 group-hover:scale-110 transition-transform shadow-lg">
                 <Calendar className="w-10 h-10 text-white" />
               </div>
@@ -108,10 +161,10 @@ export default function Home() {
               <p className="text-gray-600 leading-relaxed">
                 Cours en semaine et le week-end pour s'adapter à votre emploi du temps
               </p>
-            </div>
+            </Reveal>
 
             {/* Feature 4 */}
-            <div className="bg-white rounded-2xl p-8 text-center group hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 border border-gray-100">
+            <Reveal delay={300} className="bg-white rounded-2xl p-8 text-center group hover:shadow-2xl hover:-translate-y-2 border border-gray-100">
               <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 mb-6 group-hover:scale-110 transition-transform shadow-lg">
                 <Shield className="w-10 h-10 text-white" />
               </div>
@@ -121,10 +174,30 @@ export default function Home() {
               <p className="text-gray-600 leading-relaxed">
                 Paiement en ligne sécurisé ou sur place selon votre préférence
               </p>
-            </div>
+            </Reveal>
           </div>
         </div>
       </section>
+
+      {/* Carrousel photo géré depuis l'admin */}
+      {galleryImages.length > 0 && (
+        <section id="galerie" className="py-16 sm:py-24 bg-gray-50">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <Reveal className="text-center mb-8 sm:mb-12">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-gray-900 mb-3 sm:mb-4">
+                Le club en images
+              </h2>
+              <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
+                Entraînements, compétitions et moments partagés au JC7
+              </p>
+            </Reveal>
+
+            <Reveal>
+              <GalleryCarousel images={galleryImages} />
+            </Reveal>
+          </div>
+        </section>
+      )}
 
       {/* Categories Section */}
       <section id="categories" className="py-16 sm:py-24 md:py-32 bg-white">
@@ -152,7 +225,7 @@ export default function Home() {
                   Développement de la motricité et de la socialisation.
                 </p>
                 <div className="pt-4 border-t border-gray-100">
-                  <p className="text-4xl font-black text-red-600">130€<span className="text-lg font-normal text-gray-500">/an</span></p>
+                  <p className="text-4xl font-black text-red-600">150€<span className="text-lg font-normal text-gray-500">/an</span></p>
                 </div>
               </div>
             </div>
@@ -170,7 +243,7 @@ export default function Home() {
                   Formation complète aux valeurs du judo.
                 </p>
                 <div className="pt-4 border-t border-gray-100">
-                  <p className="text-4xl font-black text-red-600">180€<span className="text-lg font-normal text-gray-500">/an</span></p>
+                  <p className="text-4xl font-black text-red-600">200€<span className="text-lg font-normal text-gray-500">/an</span></p>
                 </div>
               </div>
             </div>
@@ -188,7 +261,7 @@ export default function Home() {
                   Ambiance conviviale et sportive.
                 </p>
                 <div className="pt-4 border-t border-gray-100">
-                  <p className="text-4xl font-black text-red-600">180€<span className="text-lg font-normal text-gray-500">/an</span></p>
+                  <p className="text-4xl font-black text-red-600">200€<span className="text-lg font-normal text-gray-500">/an</span></p>
                 </div>
               </div>
             </div>
@@ -208,6 +281,52 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Actualités dynamiques */}
+      {news.length > 0 && (
+        <section className="py-16 sm:py-24 bg-gray-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <Reveal className="text-center mb-12 sm:mb-16">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-gray-900 mb-3 sm:mb-4">
+                Dernières actualités
+              </h2>
+              <p className="text-base sm:text-lg md:text-xl text-gray-600">
+                La vie du club, les compétitions et les événements
+              </p>
+            </Reveal>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+              {news.map((item, index) => (
+                <Reveal
+                  key={item.id}
+                  delay={index * 100}
+                  className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1"
+                >
+                  <div className="flex items-center gap-2 text-sm font-medium text-red-600 mb-3">
+                    <CalendarDays className="h-4 w-4" />
+                    {new Date(item.published_at).toLocaleDateString("fr-FR", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">{item.title}</h3>
+                  <p className="text-gray-600 leading-relaxed line-clamp-4">{item.excerpt}</p>
+                </Reveal>
+              ))}
+            </div>
+
+            <div className="text-center mt-10">
+              <Button asChild variant="outline" size="lg" className="rounded-full group">
+                <Link href="/actualites">
+                  Toutes les actualités
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Contact Section - Style Apple */}
       <section id="contact" className="py-16 sm:py-24 md:py-32 bg-white">
@@ -241,6 +360,27 @@ export default function Home() {
               <p className="text-sm text-gray-600 mt-1">{CLUB_INFO.street}</p>
               <p className="text-sm text-gray-600">{CLUB_INFO.postalCode} {CLUB_INFO.city}</p>
             </div>
+          </div>
+
+          <div className="mt-10 flex justify-center gap-4">
+            <a
+              href={CLUB_INFO.facebook}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Facebook du JC7"
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-md transition-transform hover:scale-110"
+            >
+              <Facebook className="h-5 w-5" />
+            </a>
+            <a
+              href={CLUB_INFO.instagram}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Instagram du JC7"
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-purple-600 to-pink-600 text-white shadow-md transition-transform hover:scale-110"
+            >
+              <Instagram className="h-5 w-5" />
+            </a>
           </div>
         </div>
       </section>

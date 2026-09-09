@@ -26,9 +26,9 @@ export const CLUB_INFO = {
   federation: "Fédération Française de Judo",
   federationUrl: "https://www.ffjudo.com",
   
-  // Réseaux sociaux (optionnel)
-  facebook: "",
-  instagram: "",
+  // Réseaux sociaux
+  facebook: "https://www.facebook.com/JudoCNV/?locale=fr_FR",
+  instagram: "https://www.instagram.com/judocourneuve_7/",
   
   // Horaires (optionnel)
   schedule: {

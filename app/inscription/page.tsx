@@ -45,11 +45,11 @@ export default function InscriptionPage() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span>Baby Judo</span>
-                  <span className="font-semibold">130 €</span>
+                  <span className="font-semibold">150 €</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Autres catégories</span>
-                  <span className="font-semibold">180 €</span>
+                  <span className="font-semibold">200 €</span>
                 </div>
               </div>
             </button>
@@ -72,11 +72,11 @@ export default function InscriptionPage() {
                 </div>
                 <div className="flex justify-between">
                   <span>2ème enfant</span>
-                  <span className="font-semibold">165 €</span>
+                  <span className="font-semibold">185 €</span>
                 </div>
                 <div className="flex justify-between">
                   <span>3ème et +</span>
-                  <span className="font-semibold">150 €</span>
+                  <span className="font-semibold">170 €</span>
                 </div>
               </div>
               <div className="bg-red-50 border border-red-200 p-3 rounded text-xs text-red-800 font-medium">

@@ -25,14 +25,14 @@ export const CATEGORIES = [
 ] as const;
 
 export const TARIFS: Record<string, number> = {
-  baby: 130,
-  "mini-poussin": 180,
-  poussin: 180,
-  benjamin: 180,
-  minime: 180,
-  cadet: 180,
-  junior: 180,
-  senior: 180,
+  baby: 150,
+  "mini-poussin": 200,
+  poussin: 200,
+  benjamin: 200,
+  minime: 200,
+  cadet: 200,
+  junior: 200,
+  senior: 200,
 };
 
 export function getCategoryLabel(value: string): string {
@@ -41,24 +41,24 @@ export function getCategoryLabel(value: string): string {
 }
 
 export function getTarif(category: string, childNumber: number = 1): number {
-  const baseTarif = TARIFS[category] || 180;
+  const baseTarif = TARIFS[category] || 200;
   
   // Pas de réduction pour les seniors et les baby
   if (category === "senior" || category === "baby") {
-    return baseTarif; // 180€ pour senior, 130€ pour baby (toujours)
+    return baseTarif;
   }
   
-  // Réductions pour plusieurs enfants (uniquement pour les catégories à 180€)
+  // Réductions pour plusieurs enfants
   if (childNumber === 1) {
-    return baseTarif; // 180€
+    return baseTarif; // 200€
   }
   
   if (childNumber === 2) {
-    return 165; // 2ème enfant : 165€
+    return 185; // 2ème enfant : 185€
   }
   
   if (childNumber >= 3) {
-    return 150; // 3ème enfant et + : 150€
+    return 170; // 3ème enfant et + : 170€
   }
   
   return baseTarif;

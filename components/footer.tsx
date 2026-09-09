@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Facebook, Instagram } from "lucide-react";
 import { CLUB_INFO } from "@/lib/club-info";
 
 export function Footer() {
@@ -17,6 +18,26 @@ export function Footer() {
             <p className="text-sm">
               Cours pour tous les âges, du baby judo aux adultes.
             </p>
+            <div className="mt-4 flex gap-3">
+              <a
+                href={CLUB_INFO.facebook}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Facebook du JC7"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-800 transition-colors hover:bg-blue-600 hover:text-white"
+              >
+                <Facebook className="h-4 w-4" />
+              </a>
+              <a
+                href={CLUB_INFO.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Instagram du JC7"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-800 transition-colors hover:bg-gradient-to-br hover:from-purple-600 hover:to-pink-600 hover:text-white"
+              >
+                <Instagram className="h-4 w-4" />
+              </a>
+            </div>
           </div>
 
           {/* Contact */}
@@ -43,6 +64,11 @@ export function Footer() {
           <div>
             <h3 className="text-white font-bold text-lg mb-4">Informations légales</h3>
             <ul className="text-sm space-y-2">
+              <li>
+                <Link href="/documents" className="hover:text-white transition-colors">
+                  Documents à télécharger
+                </Link>
+              </li>
               <li>
                 <Link href="/mentions-legales" className="hover:text-white transition-colors">
                   Mentions légales
