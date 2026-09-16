@@ -18,8 +18,8 @@ export async function POST(request: NextRequest) {
 
     const { registrationId } = await request.json();
 
-    const { error } = await (supabase
-      .from("registrations") as any)
+    const { error } = await supabase
+      .from("registrations")
       .update({
         payment_status: "cancelled",
       })

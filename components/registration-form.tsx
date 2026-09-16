@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useForm, type FieldPath } from "react-hook-form";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -10,11 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { calculateCategory, CATEGORIES, getTarif, getCategoryLabel } from "@/lib/categories";
-import { RGPDConsent } from "@/components/rgpd-consent";
-import { FormStepper } from "@/components/ui/form-stepper";
-import { createClient } from "@/lib/supabase/client";
-import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 
 const registrationSchema = z.object({
   // Informations du pratiquant
@@ -23,17 +18,6 @@ const registrationSchema = z.object({
   birthDate: z.string().min(1, "La date de naissance est requise"),
   category: z.string().min(1, "Catégorie requise"),
   belt: z.string().optional(),
-  licenseNumber: z.string().optional().refine(
-    (val) => {
-      if (!val || val === "") return true;
-      // Format: MJJMMAAAANNNNNXX (17 caractères)
-      const regex = /^[MF]\d{8}[A-Z*]{5}\d{2}$/;
-      return regex.test(val);
-    },
-    {
-      message: "Format invalide. Exemple: M18121999TAUPI01 ou F22012002LOTI*01",
-    }
-  ),
   address: z.string().min(5, "Adresse requise"),
   postalCode: z.string().min(5, "Code postal requis"),
   city: z.string().min(2, "Ville requise"),
@@ -53,7 +37,6 @@ const registrationSchema = z.object({
   guardianEmail: z.string().optional(),
   
   medicalNote: z.string().optional(),
-  medicalCertificateUrl: z.string().optional(),
   paymentMethod: z.string().min(1, "Mode de paiement requis"),
 }).refine(
   (data) => {
@@ -78,35 +61,11 @@ const registrationSchema = z.object({
 
 type RegistrationFormData = z.infer<typeof registrationSchema>;
 
-const STEPS = [
-  { title: "Le pratiquant", description: "Identité et niveau" },
-  { title: "Coordonnées", description: "Adresse et contact" },
-  { title: "Responsable légal", description: "Obligatoire pour les mineurs" },
-  { title: "Médical", description: "Certificat et informations de santé" },
-  { title: "Paiement", description: "Récapitulatif et validation" },
-];
-
-/** Champs à valider avant de passer à l'étape suivante. */
-const STEP_FIELDS: FieldPath<RegistrationFormData>[][] = [
-  ["lastName", "firstName", "birthDate", "category", "licenseNumber"],
-  ["address", "postalCode", "city", "phone", "email", "socialSecurityNumber"],
-  ["guardianFirstName"],
-  [],
-  ["paymentMethod"],
-];
-
 export function RegistrationForm() {
-  const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [registrationId, setRegistrationId] = useState<string | null>(null);
-  const [rgpdConsent, setRgpdConsent] = useState(false);
-  const [medicalCertificateFile, setMedicalCertificateFile] = useState<File | null>(null);
-  const [uploadingFile, setUploadingFile] = useState(false);
-  const topRef = useRef<HTMLDivElement>(null);
-
-  const isLastStep = step === STEPS.length - 1;
 
   const {
     register,
@@ -114,10 +73,8 @@ export function RegistrationForm() {
     formState: { errors },
     setValue,
     watch,
-    trigger,
   } = useForm<RegistrationFormData>({
     resolver: zodResolver(registrationSchema),
-    mode: "onTouched",
     defaultValues: {
       isSelfRegistration: false,
     },
@@ -127,94 +84,8 @@ export function RegistrationForm() {
   const belt = watch("belt");
   const paymentMethod = watch("paymentMethod");
   const isSelfRegistration = watch("isSelfRegistration");
-  const birthDate = watch("birthDate");
-
-  useEffect(() => {
-    if (birthDate) {
-      const autoCategory = calculateCategory(birthDate);
-      if (autoCategory) {
-        setValue("category", autoCategory);
-      }
-    }
-  }, [birthDate, setValue]);
-
-  const goToStep = (target: number) => {
-    setStep(target);
-    setError(null);
-    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  const handleNext = async () => {
-    const fields = STEP_FIELDS[step];
-
-    // L'étape "responsable légal" n'a rien à valider si l'inscription est pour soi-même.
-    const shouldValidate = !(step === 2 && isSelfRegistration) && fields.length > 0;
-
-    if (shouldValidate) {
-      const valid = await trigger(fields, { shouldFocus: true });
-      if (!valid) {
-        setError("Veuillez corriger les champs en rouge avant de continuer.");
-        return;
-      }
-    }
-
-    goToStep(Math.min(step + 1, STEPS.length - 1));
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Vérifier le type de fichier
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
-    if (!validTypes.includes(file.type)) {
-      setError("Format de fichier non valide. Utilisez JPG, PNG ou PDF.");
-      return;
-    }
-
-    // Vérifier la taille (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setError("Le fichier est trop volumineux. Maximum 5MB.");
-      return;
-    }
-
-    setMedicalCertificateFile(file);
-    setError(null);
-  };
-
-  const uploadMedicalCertificate = async (file: File, registrationId: string): Promise<string | null> => {
-    try {
-      const supabase = createClient();
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${registrationId}-${Date.now()}.${fileExt}`;
-      const filePath = `medical-certificates/${fileName}`;
-
-      const { data, error } = await supabase.storage
-        .from('documents')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (error) {
-        console.error('Erreur upload Supabase:', error);
-        return null;
-      }
-
-      // Retourner le chemin du fichier (pas l'URL publique pour la sécurité)
-      return filePath;
-    } catch (error) {
-      console.error('Erreur lors de l\'upload:', error);
-      return null;
-    }
-  };
 
   const onSubmit = async (data: RegistrationFormData) => {
-    if (!rgpdConsent) {
-      setError("Vous devez accepter la politique de confidentialité pour continuer.");
-      return;
-    }
-
     setIsSubmitting(true);
     setError(null);
 
@@ -228,7 +99,6 @@ export function RegistrationForm() {
           birth_date: data.birthDate,
           category: data.category,
           belt: data.belt || null,
-          license_number: data.licenseNumber || null,
           address: data.address,
           postal_code: data.postalCode,
           city: data.city,
@@ -255,24 +125,6 @@ export function RegistrationForm() {
 
       const result = await response.json();
 
-      // Uploader le certificat médical si présent
-      if (medicalCertificateFile && result.id) {
-        setUploadingFile(true);
-        const certificateUrl = await uploadMedicalCertificate(medicalCertificateFile, result.id);
-        
-        if (certificateUrl) {
-          // Mettre à jour l'inscription avec l'URL du certificat
-          await fetch(`/api/registrations/${result.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              medical_certificate_url: certificateUrl,
-            }),
-          });
-        }
-        setUploadingFile(false);
-      }
-
       if (data.paymentMethod === "carte" && result.checkoutUrl) {
         window.location.href = result.checkoutUrl;
       } else {
@@ -286,71 +138,11 @@ export function RegistrationForm() {
     }
   };
 
-  const onFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    if (!isLastStep) {
-      event.preventDefault();
-      handleNext();
-      return;
-    }
-    handleSubmit(onSubmit)(event);
-  };
-
-  if (success && registrationId) {
-    return (
-      <div className="p-6 bg-green-50 border-l-4 border-green-600 rounded space-y-4">
-        <div>
-          <p className="text-green-800 font-semibold text-lg">✓ Inscription enregistrée avec succès !</p>
-          <p className="text-sm text-green-700 mt-2">
-            Vous recevrez un email de confirmation.
-            {paymentMethod === "cheque" && " N'oubliez pas d'apporter votre chèque lors de votre première séance."}
-            {paymentMethod === "especes" && " N'oubliez pas d'apporter le montant en espèces lors de votre première séance."}
-          </p>
-        </div>
-
-        <div className="pt-2 border-t border-green-200">
-          <p className="text-sm text-green-800 font-medium mb-3">Téléchargez votre reçu d&apos;inscription :</p>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button
-              type="button"
-              className="flex-1 bg-green-600 hover:bg-green-700"
-              onClick={() => window.open(`/api/registrations/${registrationId}/receipt`, "_blank")}
-            >
-              Télécharger le reçu PDF
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={() => (window.location.href = "/")}
-            >
-              Retour à l&apos;accueil
-            </Button>
-          </div>
-          <p className="text-xs text-green-600 mt-2 text-center">
-            Ce document contient toutes les informations de votre inscription et le montant à régler
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <form onSubmit={onFormSubmit} className="space-y-8">
-      <div ref={topRef} className="scroll-mt-24" />
-
-      <FormStepper steps={STEPS} current={step} onStepClick={goToStep} />
-
-      {error && (
-        <div role="alert" className="rounded-md bg-destructive/10 p-4 text-sm text-destructive">
-          {error}
-        </div>
-      )}
-
-      {/* ÉTAPE 1 — LE PRATIQUANT */}
-      {step === 0 && (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+      {/* INFORMATIONS DU PRATIQUANT */}
       <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h2 className="text-xl font-bold mb-1 text-primary">Informations du pratiquant</h2>
-        <p className="mb-6 text-sm text-muted-foreground">Identité, catégorie et niveau</p>
+        <h2 className="text-xl font-bold mb-6 text-primary">Informations du pratiquant</h2>
         
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -394,25 +186,23 @@ export function RegistrationForm() {
 
             <div className="space-y-2">
               <Label htmlFor="category">Catégorie d&apos;âge *</Label>
-              <Input
-                id="category"
-                value={category ? getCategoryLabel(category) : "Saisissez d'abord la date de naissance"}
-                disabled
-                className="bg-gray-50"
-              />
-              <input type="hidden" {...register("category")} value={category || ""} />
+              <Select onValueChange={(value) => setValue("category", value)} value={category}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner une catégorie" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="baby">Baby Judo (4-5 ans)</SelectItem>
+                  <SelectItem value="mini-poussin">Mini-Poussin (6-7 ans)</SelectItem>
+                  <SelectItem value="poussin">Poussin (8-9 ans)</SelectItem>
+                  <SelectItem value="benjamin">Benjamin (10-11 ans)</SelectItem>
+                  <SelectItem value="minime">Minime (12-13 ans)</SelectItem>
+                  <SelectItem value="cadet">Cadet (14-15 ans)</SelectItem>
+                  <SelectItem value="junior">Junior (16-17 ans)</SelectItem>
+                  <SelectItem value="senior">Senior (18+ ans)</SelectItem>
+                </SelectContent>
+              </Select>
               {errors.category && (
                 <p className="text-sm text-destructive">{errors.category.message}</p>
-              )}
-              {category && (
-                <div className="mt-2">
-                  <p className="text-xs text-muted-foreground mb-2">Catégorie déterminée automatiquement selon la date de naissance</p>
-                  <div className="bg-blue-50 border-l-4 border-blue-600 p-3 rounded">
-                    <p className="text-sm font-semibold text-blue-900">
-                      Montant : {getTarif(category)} €
-                    </p>
-                  </div>
-                </div>
               )}
             </div>
           </div>
@@ -438,33 +228,6 @@ export function RegistrationForm() {
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="licenseNumber">Numéro de licence (optionnel)</Label>
-            <Input
-              id="licenseNumber"
-              {...register("licenseNumber")}
-              placeholder="Ex: M18121999TAUPI01"
-              maxLength={17}
-              className="uppercase"
-            />
-            {errors.licenseNumber && (
-              <p className="text-sm text-destructive">{errors.licenseNumber.message}</p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Pour les anciens licenciés uniquement. Format: MJJMMAAAANNNNNXX
-            </p>
-          </div>
-        </div>
-      </div>
-      )}
-
-      {/* ÉTAPE 2 — COORDONNÉES */}
-      {step === 1 && (
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h2 className="text-xl font-bold mb-1 text-primary">Coordonnées</h2>
-        <p className="mb-6 text-sm text-muted-foreground">Adresse et moyens de contact</p>
-
-        <div className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="address">Adresse *</Label>
             <Input
@@ -554,10 +317,8 @@ export function RegistrationForm() {
           </div>
         </div>
       </div>
-      )}
 
-      {/* ÉTAPE 3 — RESPONSABLE LÉGAL */}
-      {step === 2 && (
+      {/* RESPONSABLE LÉGAL */}
       <div className="bg-white p-6 rounded-lg shadow-sm border">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-primary">Responsable légal</h2>
@@ -652,106 +413,32 @@ export function RegistrationForm() {
         {isSelfRegistration && (
           <div className="p-4 bg-blue-50 border-l-4 border-blue-600 rounded">
             <p className="text-sm text-blue-800">
-              Vos informations personnelles seront utilisées comme responsable légal.
+              ℹ️ Vos informations personnelles seront utilisées comme responsable légal.
             </p>
           </div>
         )}
       </div>
-      )}
 
-      {/* ÉTAPE 4 — INFORMATIONS MÉDICALES */}
-      {step === 3 && (
+      {/* INFORMATIONS MÉDICALES */}
       <div className="bg-white p-6 rounded-lg shadow-sm border">
         <h2 className="text-xl font-bold mb-6 text-primary">Informations médicales</h2>
         
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="medicalCertificate">Certificat médical (optionnel)</Label>
-            <Input
-              id="medicalCertificate"
-              type="file"
-              accept=".jpg,.jpeg,.png,.pdf"
-              onChange={handleFileChange}
-              disabled={isSubmitting || uploadingFile}
-              className="cursor-pointer"
-            />
-            {medicalCertificateFile && (
-              <p className="text-sm text-green-600">
-                ✓ Fichier sélectionné : {medicalCertificateFile.name}
-              </p>
-            )}
-            {uploadingFile && (
-              <p className="text-sm text-blue-600">
-                Upload en cours...
-              </p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Formats acceptés : JPG, PNG, PDF (max 5MB)
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="medicalNote">Note médicale (optionnel)</Label>
-            <Textarea
-              id="medicalNote"
-              {...register("medicalNote")}
-              placeholder="Allergies, traitements en cours, contre-indications..."
-              rows={4}
-            />
-            <p className="text-xs text-muted-foreground">
-              Ces informations resteront confidentielles et ne seront utilisées qu&apos;en cas d&apos;urgence.
-            </p>
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="medicalNote">Note médicale (optionnel)</Label>
+          <Textarea
+            id="medicalNote"
+            {...register("medicalNote")}
+            placeholder="Allergies, traitements en cours, contre-indications..."
+            rows={4}
+          />
+          <p className="text-xs text-muted-foreground">
+            Ces informations resteront confidentielles et ne seront utilisées qu&apos;en cas d&apos;urgence.
+          </p>
         </div>
       </div>
-      )}
 
-      {/* ÉTAPE 5 — RÉCAPITULATIF ET PAIEMENT */}
-      {step === 4 && (
-      <div className="space-y-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h2 className="text-xl font-bold mb-4 text-primary">Récapitulatif</h2>
-          <dl className="divide-y text-sm">
-            <div className="flex justify-between gap-4 py-2">
-              <dt className="text-muted-foreground">Pratiquant</dt>
-              <dd className="font-medium text-right">
-                {watch("firstName")} {watch("lastName")}
-              </dd>
-            </div>
-            <div className="flex justify-between gap-4 py-2">
-              <dt className="text-muted-foreground">Catégorie</dt>
-              <dd className="font-medium text-right">
-                {category ? getCategoryLabel(category) : "—"}
-              </dd>
-            </div>
-            <div className="flex justify-between gap-4 py-2">
-              <dt className="text-muted-foreground">Email</dt>
-              <dd className="font-medium text-right break-all">{watch("email")}</dd>
-            </div>
-            <div className="flex justify-between gap-4 py-2">
-              <dt className="text-muted-foreground">Certificat médical</dt>
-              <dd className="font-medium text-right">
-                {medicalCertificateFile ? medicalCertificateFile.name : "Non fourni"}
-              </dd>
-            </div>
-            <div className="flex items-baseline justify-between gap-4 py-3">
-              <dt className="font-semibold">Montant à régler</dt>
-              <dd className="text-2xl font-black text-red-600">
-                {category ? `${getTarif(category)} €` : "—"}
-              </dd>
-            </div>
-          </dl>
-          <Button
-            type="button"
-            variant="link"
-            className="h-auto p-0 text-sm"
-            onClick={() => goToStep(0)}
-          >
-            Modifier mes informations
-          </Button>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+      {/* MODE DE PAIEMENT */}
+      <div className="bg-white p-6 rounded-lg shadow-sm border">
         <h2 className="text-xl font-bold mb-6 text-primary">Mode de paiement</h2>
         
         <div className="space-y-2">
@@ -779,49 +466,49 @@ export function RegistrationForm() {
             </div>
           )}
         </div>
-        </div>
-
-        <RGPDConsent
-          checked={rgpdConsent}
-          onCheckedChange={setRgpdConsent}
-          error={error && !rgpdConsent ? "Consentement requis" : undefined}
-        />
       </div>
+
+      {/* MESSAGES */}
+      {success && registrationId && (
+        <div className="p-6 bg-green-50 border-l-4 border-green-600 rounded space-y-4">
+          <div>
+            <p className="text-green-800 font-semibold text-lg">✓ Inscription enregistrée avec succès !</p>
+            <p className="text-sm text-green-700 mt-2">
+              Vous recevrez un email de confirmation. 
+              {paymentMethod === "cheque" && " N'oubliez pas d'apporter votre chèque lors de votre première séance."}
+              {paymentMethod === "especes" && " N'oubliez pas d'apporter le montant en espèces lors de votre première séance."}
+            </p>
+          </div>
+          
+          <div className="pt-2 border-t border-green-200">
+            <p className="text-sm text-green-800 font-medium mb-3">📄 Téléchargez votre reçu d'inscription :</p>
+            <Button
+              type="button"
+              variant="default"
+              className="w-full bg-green-600 hover:bg-green-700"
+              onClick={() => window.open(`/api/registrations/${registrationId}/receipt`, '_blank')}
+            >
+              📥 Télécharger le reçu PDF
+            </Button>
+            <p className="text-xs text-green-600 mt-2 text-center">
+              Ce document contient toutes les informations de votre inscription et le montant à régler
+            </p>
+          </div>
+        </div>
       )}
 
-      {/* NAVIGATION */}
-      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          onClick={() => goToStep(step - 1)}
-          disabled={step === 0 || isSubmitting}
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Précédent
-        </Button>
+      {error && (
+        <div className="p-4 bg-destructive/10 text-destructive rounded-md">
+          {error}
+        </div>
+      )}
 
-        {isLastStep ? (
-          <Button type="submit" size="lg" disabled={isSubmitting}>
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {uploadingFile ? "Envoi du certificat..." : "Traitement en cours..."}
-              </>
-            ) : paymentMethod === "carte" ? (
-              "Continuer vers le paiement"
-            ) : (
-              "Valider mon inscription"
-            )}
-          </Button>
-        ) : (
-          <Button type="button" size="lg" onClick={handleNext}>
-            Continuer
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        )}
-      </div>
+      {/* BOUTON DE SOUMISSION */}
+      <Button type="submit" className="w-full" size="lg" disabled={isSubmitting || success}>
+        {isSubmitting ? "Traitement en cours..." : 
+         paymentMethod === "carte" ? "Continuer vers le paiement" : 
+         "Valider mon inscription"}
+      </Button>
 
       <p className="text-sm text-muted-foreground text-center">
         * Champs obligatoires

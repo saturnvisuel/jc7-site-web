@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   useReactTable,
   getCoreRowModel,
@@ -16,14 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import { Search, FileText, Trash2, CheckCircle2, XCircle, MoreVertical, Download } from "lucide-react";
+import { Search, FileText } from "lucide-react";
 import { Database } from "@/lib/supabase/types";
 import { ExportCSVDialog } from "@/components/admin/export-csv-dialog";
 
@@ -52,35 +44,9 @@ const getStatusBadge = (status: string) => {
 };
 
 export function RegistrationsTable({ data }: RegistrationsTableProps) {
-  const router = useRouter();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Êtes-vous sûr de vouloir supprimer l'inscription de ${name} ?`)) {
-      return;
-    }
-
-    setDeletingId(id);
-    try {
-      const response = await fetch(`/api/registrations/${id}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        router.refresh();
-      } else {
-        alert("Erreur lors de la suppression");
-      }
-    } catch (error) {
-      console.error("Error deleting registration:", error);
-      alert("Erreur lors de la suppression");
-    } finally {
-      setDeletingId(null);
-    }
-  };
 
   const columns: ColumnDef<Registration>[] = [
     {
@@ -104,18 +70,6 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
       header: "Catégorie",
     },
     {
-      accessorKey: "medical_certificate_url",
-      header: "Certificat",
-      cell: ({ row }) => {
-        const hasFile = !!row.getValue("medical_certificate_url");
-        return hasFile ? (
-          <CheckCircle2 className="h-5 w-5 text-green-600" />
-        ) : (
-          <XCircle className="h-5 w-5 text-gray-300" />
-        );
-      },
-    },
-    {
       accessorKey: "payment_status",
       header: "Statut",
       cell: ({ row }) => getStatusBadge(row.getValue("payment_status")),
@@ -129,54 +83,16 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={() => {
-                window.open(`/api/registrations/${row.original.id}/pdf`, "_blank");
-              }}
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Télécharger PDF
-            </DropdownMenuItem>
-            {row.original.medical_certificate_url && (
-              <DropdownMenuItem
-                onClick={async () => {
-                  try {
-                    const response = await fetch('/api/storage/signed-url', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ filePath: row.original.medical_certificate_url }),
-                    });
-                    const { signedUrl } = await response.json();
-                    if (signedUrl) {
-                      window.open(signedUrl, '_blank');
-                    }
-                  } catch (error) {
-                    console.error('Erreur téléchargement:', error);
-                  }
-                }}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Certificat médical
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-red-600"
-              onClick={() => handleDelete(row.original.id, `${row.original.first_name} ${row.original.last_name}`)}
-              disabled={deletingId === row.original.id}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Supprimer
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            window.open(`/api/registrations/${row.original.id}/pdf`, "_blank");
+          }}
+        >
+          <FileText className="h-4 w-4 mr-2" />
+          PDF
+        </Button>
       ),
     },
   ];
@@ -201,9 +117,9 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:gap-4">
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full">
-          <div className="relative flex-1">
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+        <div className="flex-1 flex gap-4 items-center">
+          <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Rechercher..."
@@ -218,7 +134,7 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
               table.getColumn("payment_status")?.setFilterValue(value === "all" ? "" : value)
             }
           >
-            <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Statut" />
             </SelectTrigger>
             <SelectContent>
@@ -232,15 +148,15 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
         <ExportCSVDialog data={data} />
       </div>
 
-      <div className="rounded-md border bg-background overflow-x-auto">
-        <table className="w-full min-w-[800px]">
+      <div className="rounded-md border bg-background">
+        <table className="w-full">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="border-b">
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-3 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium cursor-pointer hover:bg-muted/50 whitespace-nowrap"
+                    className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/50"
                     onClick={header.column.getToggleSortingHandler()}
                   >
                     {header.isPlaceholder
@@ -260,7 +176,7 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
               table.getRowModel().rows.map((row) => (
                 <tr key={row.id} className="border-b hover:bg-muted/50">
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-3 sm:px-4 py-3 text-xs sm:text-sm">
+                    <td key={cell.id} className="px-4 py-3 text-sm">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
@@ -277,8 +193,8 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
         </table>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
-        <div className="text-xs sm:text-sm text-muted-foreground">
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
           {table.getFilteredRowModel().rows.length} inscription(s) au total
         </div>
         <div className="flex items-center space-x-2">
@@ -288,10 +204,9 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
-            <span className="hidden sm:inline">Précédent</span>
-            <span className="sm:hidden">←</span>
+            Précédent
           </Button>
-          <div className="text-xs sm:text-sm">
+          <div className="text-sm">
             Page {table.getState().pagination.pageIndex + 1} sur {table.getPageCount()}
           </div>
           <Button
@@ -300,8 +215,7 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
-            <span className="hidden sm:inline">Suivant</span>
-            <span className="sm:hidden">→</span>
+            Suivant
           </Button>
         </div>
       </div>

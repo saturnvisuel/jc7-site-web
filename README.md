@@ -2,10 +2,6 @@
 
 Application web MVP pour la gestion des inscriptions et paiements du club de judo JC7.
 
-**Développé par** : Saturn.  
-**Client** : JC7 - Judo Courneuvien 7  
-**Date** : Mai 2026
-
 ## Stack Technique
 
 - **Frontend**: Next.js 14 (App Router), TypeScript, Tailwind CSS, shadcn/ui
@@ -249,14 +245,4 @@ Après déploiement, configurer le webhook Stripe:
 
 ## Support
 
-Pour toute question: judo.courneuve93@gmail.com
-
----
-
-## Crédits
-
-**Développement** : Saturn.  
-**Technologies** : Next.js, TypeScript, Supabase, Stripe  
-**Année** : 2026
-
-© 2026 Saturn. Tous droits réservés.
+Pour toute question: contact@jc7.fr

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { LogIn, Menu, X } from "lucide-react";
@@ -40,11 +41,15 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link
-            href="/"
-            className="text-2xl font-semibold tracking-tight text-gray-900 transition-transform hover:scale-105"
-          >
-            JC7
+          <Link href="/" className="flex items-center transition-transform hover:scale-105">
+            <Image
+              src="/JC7_logo.jpg"
+              alt="JC7 - Judo Courneuvien 7"
+              width={56}
+              height={56}
+              className="h-12 w-auto rounded-full object-cover"
+              priority
+            />
           </Link>
 
           {/* Desktop Navigation */}
