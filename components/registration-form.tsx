@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useRef, useState } from "react";
+import { useForm, type FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FormStepper } from "@/components/ui/form-stepper";
+import { RGPDConsent } from "@/components/rgpd-consent";
+import { calculateCategory, getCategoryLabel, getTarif } from "@/lib/categories";
+import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 
 const registrationSchema = z.object({
   // Informations du pratiquant
@@ -61,11 +65,48 @@ const registrationSchema = z.object({
 
 type RegistrationFormData = z.infer<typeof registrationSchema>;
 
+const STEPS = [
+  { title: "Pratiquant", description: "Identité et coordonnées" },
+  { title: "Responsable légal", description: "Obligatoire pour un mineur" },
+  { title: "Paiement", description: "Récapitulatif et validation" },
+];
+
+/** Champs à valider avant de passer à l'étape suivante. */
+const STEP_FIELDS: FieldPath<RegistrationFormData>[][] = [
+  [
+    "lastName",
+    "firstName",
+    "birthDate",
+    "category",
+    "address",
+    "postalCode",
+    "city",
+    "phone",
+    "email",
+    "socialSecurityNumber",
+  ],
+  [
+    "guardianLastName",
+    "guardianFirstName",
+    "guardianAddress",
+    "guardianPostalCode",
+    "guardianCity",
+    "guardianPhone",
+    "guardianEmail",
+  ],
+  ["paymentMethod"],
+];
+
 export function RegistrationForm() {
+  const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [registrationId, setRegistrationId] = useState<string | null>(null);
+  const [rgpdConsent, setRgpdConsent] = useState(false);
+  const topRef = useRef<HTMLDivElement>(null);
+
+  const isLastStep = step === STEPS.length - 1;
 
   const {
     register,
@@ -73,8 +114,10 @@ export function RegistrationForm() {
     formState: { errors },
     setValue,
     watch,
+    trigger,
   } = useForm<RegistrationFormData>({
     resolver: zodResolver(registrationSchema),
+    mode: "onTouched",
     defaultValues: {
       isSelfRegistration: false,
     },
@@ -82,10 +125,40 @@ export function RegistrationForm() {
 
   const category = watch("category");
   const belt = watch("belt");
+  const birthDate = watch("birthDate");
   const paymentMethod = watch("paymentMethod");
   const isSelfRegistration = watch("isSelfRegistration");
 
+  // La catégorie d'âge découle de la date de naissance : jamais saisie à la main.
+  useEffect(() => {
+    if (!birthDate) return;
+    const autoCategory = calculateCategory(birthDate);
+    if (autoCategory) {
+      setValue("category", autoCategory, { shouldValidate: true });
+    }
+  }, [birthDate, setValue]);
+
+  const goToStep = (target: number) => {
+    setStep(target);
+    setError(null);
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handleNext = async () => {
+    const valid = await trigger(STEP_FIELDS[step], { shouldFocus: true });
+    if (!valid) {
+      setError("Veuillez corriger les champs en rouge avant de continuer.");
+      return;
+    }
+    goToStep(Math.min(step + 1, STEPS.length - 1));
+  };
+
   const onSubmit = async (data: RegistrationFormData) => {
+    if (!rgpdConsent) {
+      setError("Vous devez accepter la politique de confidentialité pour continuer.");
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
@@ -138,9 +211,29 @@ export function RegistrationForm() {
     }
   };
 
+  const onFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    if (!isLastStep) {
+      event.preventDefault();
+      handleNext();
+      return;
+    }
+    handleSubmit(onSubmit)(event);
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-      {/* INFORMATIONS DU PRATIQUANT */}
+    <form onSubmit={onFormSubmit} className="space-y-8 max-w-4xl mx-auto">
+      <div ref={topRef} className="scroll-mt-24" />
+
+      <FormStepper steps={STEPS} current={step} onStepClick={goToStep} />
+
+      {error && (
+        <div role="alert" className="bg-red-50 border-l-4 border-red-600 p-4 rounded">
+          <p className="text-red-800">{error}</p>
+        </div>
+      )}
+
+      {/* ÉTAPE 1 — INFORMATIONS DU PRATIQUANT */}
+      {step === 0 && (
       <div className="bg-white p-6 rounded-lg shadow-sm border">
         <h2 className="text-xl font-bold mb-6 text-primary">Informations du pratiquant</h2>
         
@@ -186,23 +279,26 @@ export function RegistrationForm() {
 
             <div className="space-y-2">
               <Label htmlFor="category">Catégorie d&apos;âge *</Label>
-              <Select onValueChange={(value) => setValue("category", value)} value={category}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner une catégorie" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="baby">Baby Judo (4-5 ans)</SelectItem>
-                  <SelectItem value="mini-poussin">Mini-Poussin (6-7 ans)</SelectItem>
-                  <SelectItem value="poussin">Poussin (8-9 ans)</SelectItem>
-                  <SelectItem value="benjamin">Benjamin (10-11 ans)</SelectItem>
-                  <SelectItem value="minime">Minime (12-13 ans)</SelectItem>
-                  <SelectItem value="cadet">Cadet (14-15 ans)</SelectItem>
-                  <SelectItem value="junior">Junior (16-17 ans)</SelectItem>
-                  <SelectItem value="senior">Senior (18+ ans)</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="category"
+                value={
+                  category
+                    ? getCategoryLabel(category)
+                    : "Saisissez d'abord la date de naissance"
+                }
+                disabled
+                readOnly
+                className="bg-gray-50"
+                onChange={() => {}} // Évite le warning React
+              />
+              <input type="hidden" {...register("category")} value={category || ""} />
               {errors.category && (
                 <p className="text-sm text-destructive">{errors.category.message}</p>
+              )}
+              {category && (
+                <p className="text-xs text-muted-foreground">
+                  Catégorie déterminée automatiquement selon la date de naissance
+                </p>
               )}
             </div>
           </div>
@@ -317,8 +413,10 @@ export function RegistrationForm() {
           </div>
         </div>
       </div>
+      )}
 
-      {/* RESPONSABLE LÉGAL */}
+      {/* ÉTAPE 2 — RESPONSABLE LÉGAL */}
+      {step === 1 && (
       <div className="bg-white p-6 rounded-lg shadow-sm border">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-primary">Responsable légal</h2>
@@ -418,8 +516,50 @@ export function RegistrationForm() {
           </div>
         )}
       </div>
+      )}
 
-      {/* INFORMATIONS MÉDICALES */}
+      {/* ÉTAPE 3 — RÉCAPITULATIF, SANTÉ ET PAIEMENT */}
+      {step === 2 && (
+      <>
+      <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <h2 className="text-xl font-bold mb-4 text-primary">Récapitulatif</h2>
+        <dl className="divide-y text-sm">
+          <div className="flex justify-between gap-4 py-2">
+            <dt className="text-muted-foreground">Pratiquant</dt>
+            <dd className="font-medium text-right">
+              {watch("firstName")} {watch("lastName")}
+              {category && (
+                <span className="block text-xs text-muted-foreground">
+                  {getCategoryLabel(category)}
+                </span>
+              )}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-4 py-2">
+            <dt className="text-muted-foreground">Responsable</dt>
+            <dd className="font-medium text-right">
+              {isSelfRegistration
+                ? "Le pratiquant lui-même"
+                : `${watch("guardianFirstName") ?? ""} ${watch("guardianLastName") ?? ""}`}
+            </dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-4 py-3">
+            <dt className="font-semibold">Total à régler</dt>
+            <dd className="text-2xl font-black text-red-600">
+              {category ? `${getTarif(category)} €` : "—"}
+            </dd>
+          </div>
+        </dl>
+        <Button
+          type="button"
+          variant="link"
+          className="h-auto p-0 text-sm"
+          onClick={() => goToStep(0)}
+        >
+          Modifier les informations du pratiquant
+        </Button>
+      </div>
+
       <div className="bg-white p-6 rounded-lg shadow-sm border">
         <h2 className="text-xl font-bold mb-6 text-primary">Informations médicales</h2>
         
@@ -468,6 +608,14 @@ export function RegistrationForm() {
         </div>
       </div>
 
+      <RGPDConsent
+        checked={rgpdConsent}
+        onCheckedChange={setRgpdConsent}
+        error={error && !rgpdConsent ? "Consentement requis" : undefined}
+      />
+      </>
+      )}
+
       {/* MESSAGES */}
       {success && registrationId && (
         <div className="p-6 bg-green-50 border-l-4 border-green-600 rounded space-y-4">
@@ -497,18 +645,39 @@ export function RegistrationForm() {
         </div>
       )}
 
-      {error && (
-        <div className="p-4 bg-destructive/10 text-destructive rounded-md">
-          {error}
-        </div>
-      )}
+      {/* NAVIGATION */}
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          onClick={() => goToStep(step - 1)}
+          disabled={step === 0 || isSubmitting}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Précédent
+        </Button>
 
-      {/* BOUTON DE SOUMISSION */}
-      <Button type="submit" className="w-full" size="lg" disabled={isSubmitting || success}>
-        {isSubmitting ? "Traitement en cours..." : 
-         paymentMethod === "carte" ? "Continuer vers le paiement" : 
-         "Valider mon inscription"}
-      </Button>
+        {isLastStep ? (
+          <Button type="submit" size="lg" disabled={isSubmitting || success}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Traitement en cours...
+              </>
+            ) : paymentMethod === "carte" ? (
+              "Continuer vers le paiement"
+            ) : (
+              "Valider mon inscription"
+            )}
+          </Button>
+        ) : (
+          <Button type="button" size="lg" onClick={handleNext}>
+            Continuer
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        )}
+      </div>
 
       <p className="text-sm text-muted-foreground text-center">
         * Champs obligatoires

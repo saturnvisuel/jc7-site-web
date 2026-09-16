@@ -338,7 +338,7 @@ export default async function Home() {
             Une question ? Notre équipe est là pour vous répondre
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8 text-left">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 md:gap-8 text-left">
             <div className="bg-gray-50 rounded-2xl p-6">
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Email</h3>
               <a 
@@ -347,11 +347,6 @@ export default async function Home() {
               >
                 {CLUB_INFO.email}
               </a>
-            </div>
-
-            <div className="bg-gray-50 rounded-2xl p-6">
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Téléphone</h3>
-              <p className="text-lg text-gray-900 font-medium">{CLUB_INFO.phone}</p>
             </div>
 
             <div className="bg-gray-50 rounded-2xl p-6">

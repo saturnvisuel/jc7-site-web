@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Users, CheckCircle, Clock, XCircle, Euro, FileText } from "lucide-react";
+import { Users, CheckCircle, Clock, XCircle, Euro, FileText, MessageSquare } from "lucide-react";
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -17,10 +17,13 @@ export default async function DashboardPage() {
   }
 
   // Utiliser le client admin pour récupérer les données
-  const { data: registrations, error } = await supabaseAdmin
-    .from("registrations")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const [{ data: registrations, error }, { count: newMessages }] = await Promise.all([
+    supabaseAdmin.from("registrations").select("*").order("created_at", { ascending: false }),
+    supabaseAdmin
+      .from("contact_messages")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "new"),
+  ]);
 
   if (error) {
     console.error("Erreur lors de la récupération des inscriptions:", error);
@@ -109,6 +112,28 @@ export default async function DashboardPage() {
           </div>
         )}
 
+        {Boolean(newMessages) && (
+          <div className="bg-red-50 border-l-4 border-red-600 p-4 sm:p-6 rounded-lg shadow mb-6 sm:mb-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <MessageSquare className="h-8 w-8 text-red-600" />
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-red-900">
+                    {newMessages} message{newMessages! > 1 ? "s" : ""} de contact à traiter
+                  </h3>
+                  <p className="text-sm text-red-700">Envoyés depuis le formulaire du site</p>
+                </div>
+              </div>
+              <Button asChild className="w-full sm:w-auto">
+                <Link href="/admin/messages">
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Voir les messages
+                </Link>
+              </Button>
+            </div>
+          </div>
+        )}
+
         <div className="bg-background p-4 sm:p-6 rounded-lg shadow">
           <div className="flex justify-between items-center mb-4 sm:mb-6">
             <h3 className="text-lg sm:text-xl font-bold">Actions rapides</h3>
@@ -121,6 +146,12 @@ export default async function DashboardPage() {
               <Link href="/admin/paiements">
                 <Euro className="mr-2 h-4 w-4" />
                 Gestion des paiements
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/admin/messages">
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Messages de contact
               </Link>
             </Button>
             <Button variant="outline" asChild>

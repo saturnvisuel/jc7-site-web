@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/navbar";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { CLUB_INFO } from "@/lib/club-info";
-import { MapPin, Phone, Mail, Clock, Facebook, Instagram, ChevronDown } from "lucide-react";
+import { MapPin, Mail, Clock, Facebook, Instagram, ChevronDown } from "lucide-react";
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -19,26 +19,49 @@ export default function ContactPage() {
     message: "",
     newsletter: false,
     rgpd: false,
+    website: "",
   });
 
-  const [showMessage, setShowMessage] = useState(false);
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setShowMessage(true);
-    setFormData({
-      prenom: "",
-      nom: "",
-      email: "",
-      telephone: "",
-      age: "",
-      sujet: "",
-      message: "",
-      newsletter: false,
-      rgpd: false,
-    });
-    setTimeout(() => setShowMessage(false), 5000);
+    setStatus("sending");
+    setErrorMessage("");
+
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.error ?? "Erreur lors de l'envoi");
+      }
+
+      setStatus("sent");
+      setFormData({
+        prenom: "",
+        nom: "",
+        email: "",
+        telephone: "",
+        age: "",
+        sujet: "",
+        message: "",
+        newsletter: false,
+        rgpd: false,
+        website: "",
+      });
+    } catch (error) {
+      setStatus("error");
+      setErrorMessage(
+        error instanceof Error ? error.message : "Erreur lors de l'envoi du message"
+      );
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -54,7 +77,7 @@ export default function ContactPage() {
   const faqs = [
     {
       question: "Comment s'inscrire au JC7 ?",
-      answer: "Vous pouvez vous inscrire directement en ligne sur notre site via la page 'S'inscrire'. Vous pouvez également nous contacter par téléphone (06 12 92 61 41) ou email (judo.courneuve93@gmail.com) pour toute question. Un certificat médical de non contre-indication à la pratique du judo de moins de 3 mois sera demandé.",
+      answer: "Vous pouvez vous inscrire directement en ligne sur notre site via la page 'S'inscrire'. Vous pouvez également nous contacter par email (judo.courneuve93@gmail.com) pour toute question. Un certificat médical de non contre-indication à la pratique du judo de moins de 3 mois sera demandé.",
     },
     {
       question: "Faut-il avoir un judogi (kimono) ?",
@@ -249,16 +272,33 @@ export default function ContactPage() {
                     J'accepte que mes données soient utilisées pour répondre à ma demande *
                   </label>
                 </div>
+                {/* Champ piège anti-robots : invisible pour les visiteurs */}
+                <input
+                  type="text"
+                  name="website"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
+                  value={formData.website}
+                  onChange={handleChange}
+                  className="hidden"
+                />
                 <Button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-red-600 via-red-500 to-red-700 text-white py-6 px-6 rounded-lg font-semibold hover:from-red-700 hover:to-red-800 transition-all shadow-lg"
+                  disabled={status === "sending"}
+                  className="w-full bg-gradient-to-r from-red-600 via-red-500 to-red-700 text-white py-6 px-6 rounded-lg font-semibold hover:from-red-700 hover:to-red-800 transition-all shadow-lg disabled:opacity-70"
                 >
-                  Envoyer le message
+                  {status === "sending" ? "Envoi en cours..." : "Envoyer le message"}
                 </Button>
               </form>
-              {showMessage && (
+              {status === "sent" && (
                 <div className="mt-4 p-4 rounded-lg bg-green-100 text-green-700 border border-green-300">
                   ✓ Merci pour votre message ! Nous vous répondrons dans les plus brefs délais.
+                </div>
+              )}
+              {status === "error" && (
+                <div className="mt-4 p-4 rounded-lg bg-red-100 text-red-700 border border-red-300">
+                  {errorMessage} — vous pouvez aussi nous écrire à {CLUB_INFO.email}.
                 </div>
               )}
             </div>
@@ -282,16 +322,6 @@ export default function ContactPage() {
                         <br />
                         93120 La Courneuve
                       </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start">
-                    <div className="bg-gradient-to-br from-blue-100 to-blue-200 w-14 h-14 rounded-full flex items-center justify-center mr-4 flex-shrink-0 shadow-md">
-                      <Phone className="text-blue-700 w-6 h-6" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-800 mb-1 text-lg">Téléphone</h3>
-                      <p className="text-gray-600 font-semibold">06 12 92 61 41</p>
-                      <p className="text-sm text-gray-500">Disponible pendant les cours</p>
                     </div>
                   </div>
                   <div className="flex items-start">
@@ -381,17 +411,12 @@ export default function ContactPage() {
               ></iframe>
             </div>
             <div className="p-6 bg-gradient-to-r from-red-600 via-red-500 to-red-700 text-white">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="text-center">
                   <MapPin className="w-8 h-8 mx-auto mb-2" />
                   <h3 className="font-semibold mb-1">Adresse</h3>
                   <p className="text-sm opacity-90">43 Avenue du Général Leclerc</p>
                   <p className="text-sm opacity-90">93120 La Courneuve</p>
-                </div>
-                <div className="text-center">
-                  <Phone className="w-8 h-8 mx-auto mb-2" />
-                  <h3 className="font-semibold mb-1">Téléphone</h3>
-                  <p className="text-sm opacity-90">06 12 92 61 41</p>
                 </div>
                 <div className="text-center">
                   <Mail className="w-8 h-8 mx-auto mb-2" />
@@ -441,11 +466,11 @@ export default function ContactPage() {
           <p className="text-xl mb-8 opacity-90">Réservez dès maintenant votre cours d'essai gratuit</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
-              href="tel:0612926141"
+              href={`mailto:${CLUB_INFO.email}`}
               className="bg-white text-red-600 px-8 py-3 rounded-lg font-semibold hover:bg-red-50 transition-colors shadow-lg inline-flex items-center justify-center"
             >
-              <Phone className="w-5 h-5 mr-2" />
-              06 12 92 61 41
+              <Mail className="w-5 h-5 mr-2" />
+              Nous écrire
             </a>
             <Link
               href="/cours"

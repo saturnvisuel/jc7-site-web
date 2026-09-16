@@ -317,9 +317,6 @@ export default function PolitiqueConfidentialitePage() {
                 <p className="text-blue-900 mb-2">
                   <strong>Email :</strong> {CLUB_INFO.email}
                 </p>
-                <p className="text-blue-900 mb-2">
-                  <strong>Téléphone :</strong> {CLUB_INFO.phone}
-                </p>
                 <p className="text-blue-900">
                   <strong>Adresse :</strong> {CLUB_INFO.name} - {CLUB_INFO.fullAddress}
                 </p>

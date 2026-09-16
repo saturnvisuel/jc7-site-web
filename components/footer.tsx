@@ -51,9 +51,6 @@ export function Footer() {
                 </a>
               </p>
               <p>
-                <strong>Téléphone :</strong> {CLUB_INFO.phone}
-              </p>
-              <p>
                 <strong>Adresse :</strong><br />
                 {CLUB_INFO.fullAddress}
               </p>

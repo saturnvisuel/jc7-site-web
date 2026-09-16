@@ -14,8 +14,6 @@ export const CLUB_INFO = {
   
   // Contact
   email: "judo.courneuve93@gmail.com",
-  phone: "[Téléphone du club]",
-  phoneAlt: "[Téléphone alternatif]",
   
   // Légal
   siret: "[Numéro SIRET]",

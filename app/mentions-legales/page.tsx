@@ -29,9 +29,6 @@ export default function MentionsLegalesPage() {
               <p className="text-muted-foreground mb-2">
                 <strong>Email :</strong> {CLUB_INFO.email}
               </p>
-              <p className="text-muted-foreground mb-2">
-                <strong>Téléphone :</strong> {CLUB_INFO.phone}
-              </p>
               <p className="text-muted-foreground">
                 <strong>Numéro SIRET :</strong> {CLUB_INFO.siret}
               </p>

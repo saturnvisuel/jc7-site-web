@@ -58,10 +58,10 @@ const FALLBACK_SLOTS: ScheduleSlot[] = [
   // Mercredi
   { id: "f5", day_of_week: 3, start_time: "17h30", end_time: "18h30", category_label: "Babies 1", professor_name: "Moustapha Camara", level: "Débutant" },
   { id: "f6", day_of_week: 3, start_time: "18h30", end_time: "19h30", category_label: "Babies 2", professor_name: "Moustapha Camara", level: "Débutant" },
-  { id: "f7", day_of_week: 3, start_time: "19h00", end_time: "21h00", category_label: "Jujitsu (Site Jean Villard)", professor_name: "Junior Camara", level: "Tous niveaux" },
+  { id: "f7", day_of_week: 3, start_time: "19h00", end_time: "21h00", category_label: "Jujitsu (Site Jean Villard)", professor_name: "Adam", level: "Tous niveaux" },
   // Jeudi
   { id: "f8", day_of_week: 4, start_time: "17h00", end_time: "18h00", category_label: "Mini-Poussins/Poussins débutant(e)s", professor_name: "Loucif", level: "Débutant" },
-  { id: "f9", day_of_week: 4, start_time: "19h00", end_time: "21h00", category_label: "Jujitsu (Site Jean Villard)", professor_name: "Junior Camara", level: "Tous niveaux" },
+  { id: "f9", day_of_week: 4, start_time: "19h00", end_time: "21h00", category_label: "Jujitsu (Site Jean Villard)", professor_name: "Adam", level: "Tous niveaux" },
   // Vendredi
   { id: "f10", day_of_week: 5, start_time: "17h00", end_time: "18h00", category_label: "Mini-Poussins/Poussins confirmé(e)s", professor_name: "Junior Camara", level: "Confirmé" },
   { id: "f11", day_of_week: 5, start_time: "18h00", end_time: "19h00", category_label: "Benjamins", professor_name: "Junior Camara", level: "Tous niveaux" },

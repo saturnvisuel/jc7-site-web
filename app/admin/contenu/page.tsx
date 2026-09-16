@@ -96,7 +96,13 @@ export default async function AdminContenuPage() {
               id: "creneaux",
               label: "Créneaux",
               count: slotsRes.data?.length ?? 0,
-              content: <SlotsManager slots={slotsRes.data ?? []} dayLabels={[...DAY_LABELS]} />,
+              content: (
+                <SlotsManager
+                  slots={slotsRes.data ?? []}
+                  dayLabels={[...DAY_LABELS]}
+                  professorNames={(professorsRes.data ?? []).map((prof) => prof.name)}
+                />
+              ),
             },
             {
               id: "actualites",

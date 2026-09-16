@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/ui/reveal";
-import { Calendar, Clock, Users, X } from "lucide-react";
+import { ArrowRight, Calendar, Check, Clock, Users, X } from "lucide-react";
 import type { ScheduleDay } from "@/lib/content";
 
 export interface AgeCategory {
@@ -24,6 +24,26 @@ interface CoursExplorerProps {
 function matchesCategory(label: string, keywords: string[]) {
   const normalized = label.toLowerCase();
   return keywords.some((keyword) => normalized.includes(keyword));
+}
+
+// Autorise le retour à la ligne après chaque "/" plutôt qu'au milieu d'un mot
+function CategoryName({ nom }: { nom: string }) {
+  const parts = nom.split("/");
+
+  return (
+    <>
+      {parts.map((part, index) => (
+        <span key={index}>
+          {part}
+          {index < parts.length - 1 && (
+            <>
+              /<wbr />
+            </>
+          )}
+        </span>
+      ))}
+    </>
+  );
 }
 
 export function CoursExplorer({ planning, categories }: CoursExplorerProps) {
@@ -47,6 +67,17 @@ export function CoursExplorer({ planning, categories }: CoursExplorerProps) {
 
   const totalSlots = filteredPlanning.reduce((sum, day) => sum + day.slots.length, 0);
 
+  const slotCountByCategory = useMemo(() => {
+    const allSlots = planning.flatMap((day) => day.slots);
+
+    return categories.reduce<Record<string, number>>((counts, cat) => {
+      counts[cat.nom] = allSlots.filter((slot) =>
+        matchesCategory(slot.category_label, cat.keywords)
+      ).length;
+      return counts;
+    }, {});
+  }, [planning, categories]);
+
   const selectCategory = (nom: string) => {
     setSelected((current) => (current === nom ? null : nom));
     planningRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -62,7 +93,7 @@ export function CoursExplorer({ planning, categories }: CoursExplorerProps) {
               Catégories d&apos;Âge
             </h2>
             <p className="text-base sm:text-lg text-gray-600 px-4">
-              Cliquez sur une catégorie pour voir les cours correspondants
+              Cliquez sur une catégorie pour filtrer le planning ci-dessous
             </p>
           </Reveal>
 
@@ -76,22 +107,51 @@ export function CoursExplorer({ planning, categories }: CoursExplorerProps) {
                     type="button"
                     onClick={() => selectCategory(cat.nom)}
                     aria-pressed={isActive}
-                    className={`flex h-full w-full flex-col rounded-xl bg-white p-5 text-center shadow-sm border-2 ${cat.color} transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 ${
-                      isActive ? "ring-2 ring-red-600 ring-offset-2 shadow-lg" : ""
+                    className={`group flex h-full w-full flex-col rounded-xl p-5 text-center shadow-sm border-2 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 ${
+                      isActive
+                        ? "border-red-600 bg-red-50 shadow-lg"
+                        : "border-gray-200 bg-white hover:border-red-300"
                     }`}
                   >
-                    <h3 className="text-base sm:text-lg font-bold leading-snug text-gray-900 [overflow-wrap:anywhere]">
-                      {cat.nom}
+                    <h3 className="text-base sm:text-lg font-bold leading-snug text-gray-900">
+                      <CategoryName nom={cat.nom} />
                     </h3>
-                    <p className="mt-1 text-sm font-semibold text-red-600">{cat.age}</p>
+                    <span
+                      className={`mt-2 self-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${cat.color}`}
+                    >
+                      {cat.age}
+                    </span>
                     <p className="mt-3 flex-1 text-sm leading-relaxed text-gray-600">
                       {cat.description}
                     </p>
                     <div className="mt-4 border-t border-gray-200 pt-3">
                       <p className="text-2xl font-black text-red-600">{cat.tarif}</p>
-                      <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                        {isActive ? "Filtre actif" : "Voir les cours"}
+                      <p className="mt-1 text-xs text-gray-500">
+                        {slotCountByCategory[cat.nom] === 0
+                          ? "Aucun créneau programmé"
+                          : `${slotCountByCategory[cat.nom]} créneau${
+                              slotCountByCategory[cat.nom] > 1 ? "x" : ""
+                            } par semaine`}
                       </p>
+                      <span
+                        className={`mt-3 inline-flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                          isActive
+                            ? "bg-red-600 text-white"
+                            : "bg-red-50 text-red-700 group-hover:bg-red-600 group-hover:text-white"
+                        }`}
+                      >
+                        {isActive ? (
+                          <>
+                            <Check className="h-3.5 w-3.5" />
+                            Filtre actif
+                          </>
+                        ) : (
+                          <>
+                            Voir les créneaux
+                            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                          </>
+                        )}
+                      </span>
                     </div>
                   </button>
                 </Reveal>
@@ -146,13 +206,13 @@ export function CoursExplorer({ planning, categories }: CoursExplorerProps) {
                 key={cat.nom}
                 type="button"
                 onClick={() => setSelected(cat.nom)}
-                className={`max-w-full rounded-full px-4 py-2 text-sm font-medium transition-colors [overflow-wrap:anywhere] ${
+                className={`max-w-full rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                   selected === cat.nom
                     ? "bg-red-600 text-white"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
-                {cat.nom}
+                <CategoryName nom={cat.nom} />
               </button>
             ))}
           </div>

@@ -279,6 +279,48 @@ export interface Database {
         };
         Relationships: [];
       };
+      contact_messages: {
+        Row: {
+          id: string;
+          first_name: string;
+          last_name: string;
+          email: string;
+          phone: string | null;
+          age_range: string | null;
+          subject: string;
+          message: string;
+          newsletter: boolean;
+          status: "new" | "handled";
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          first_name: string;
+          last_name: string;
+          email: string;
+          phone?: string | null;
+          age_range?: string | null;
+          subject: string;
+          message: string;
+          newsletter?: boolean;
+          status?: "new" | "handled";
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          first_name?: string;
+          last_name?: string;
+          email?: string;
+          phone?: string | null;
+          age_range?: string | null;
+          subject?: string;
+          message?: string;
+          newsletter?: boolean;
+          status?: "new" | "handled";
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
