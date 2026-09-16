@@ -30,7 +30,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const validatedData = memberRegistrationSchema.parse(body);
+    const { relation_to_member, ...validatedData } =
+      memberRegistrationSchema.parse(body);
 
     const { data: registration, error: dbError } = await supabase
       .from("registrations")

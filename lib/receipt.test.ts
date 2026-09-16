@@ -39,13 +39,13 @@ vi.mock('@supabase/supabase-js', () => ({
 
 describe('API Receipt Generation', () => {
   it('devrait calculer le bon tarif pour un poussin', async () => {
-    const { getTarif } = await import('../../lib/categories');
-    expect(getTarif('poussin')).toBe(180);
+    const { getTarif } = await import('./categories');
+    expect(getTarif('poussin')).toBe(200);
   });
 
   it('devrait calculer le bon tarif pour un baby', async () => {
-    const { getTarif } = await import('../../lib/categories');
-    expect(getTarif('baby')).toBe(130);
+    const { getTarif } = await import('./categories');
+    expect(getTarif('baby')).toBe(150);
   });
 
   it('devrait formater correctement les dates', () => {

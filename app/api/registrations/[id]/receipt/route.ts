@@ -43,7 +43,10 @@ export async function GET(
 
     // Créer le PDF
     const doc = new jsPDF();
-    
+
+    // Couleur d'accent des titres de section (RGB)
+    const accentColor: [number, number, number] = [0, 51, 102];
+
     let y = 20;
     
     // En-tête simple

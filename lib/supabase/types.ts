@@ -23,6 +23,19 @@ export interface Database {
           license_number: string | null;
           medical_note: string | null;
           medical_certificate_url: string | null;
+          address: string;
+          postal_code: string;
+          city: string;
+          phone_alt: string | null;
+          social_security_number: string;
+          is_self_registration: boolean | null;
+          guardian_first_name: string | null;
+          guardian_last_name: string | null;
+          guardian_address: string | null;
+          guardian_postal_code: string | null;
+          guardian_city: string | null;
+          guardian_phone: string | null;
+          guardian_email: string | null;
           payment_status: "pending" | "paid" | "cancelled";
           payment_method: "carte" | "cheque" | "especes";
           stripe_session_id: string | null;
@@ -35,12 +48,25 @@ export interface Database {
           birth_date: string;
           email: string;
           phone: string;
-          emergency_contact: string;
+          emergency_contact?: string;
           category: string;
           belt?: string | null;
           license_number?: string | null;
           medical_note?: string | null;
           medical_certificate_url?: string | null;
+          address?: string;
+          postal_code?: string;
+          city?: string;
+          phone_alt?: string | null;
+          social_security_number?: string;
+          is_self_registration?: boolean | null;
+          guardian_first_name?: string | null;
+          guardian_last_name?: string | null;
+          guardian_address?: string | null;
+          guardian_postal_code?: string | null;
+          guardian_city?: string | null;
+          guardian_phone?: string | null;
+          guardian_email?: string | null;
           payment_status?: "pending" | "paid" | "cancelled";
           payment_method?: "carte" | "cheque" | "especes";
           stripe_session_id?: string | null;
@@ -59,11 +85,25 @@ export interface Database {
           license_number?: string | null;
           medical_note?: string | null;
           medical_certificate_url?: string | null;
+          address?: string;
+          postal_code?: string;
+          city?: string;
+          phone_alt?: string | null;
+          social_security_number?: string;
+          is_self_registration?: boolean | null;
+          guardian_first_name?: string | null;
+          guardian_last_name?: string | null;
+          guardian_address?: string | null;
+          guardian_postal_code?: string | null;
+          guardian_city?: string | null;
+          guardian_phone?: string | null;
+          guardian_email?: string | null;
           payment_status?: "pending" | "paid" | "cancelled";
           payment_method?: "carte" | "cheque" | "especes";
           stripe_session_id?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       professors: {
         Row: {
@@ -90,6 +130,7 @@ export interface Database {
           is_active?: boolean;
           created_at?: string;
         };
+        Relationships: [];
       };
       schedule_slots: {
         Row: {
@@ -128,6 +169,7 @@ export interface Database {
           is_active?: boolean;
           created_at?: string;
         };
+        Relationships: [];
       };
       documents: {
         Row: {
@@ -166,6 +208,7 @@ export interface Database {
           is_published?: boolean;
           created_at?: string;
         };
+        Relationships: [];
       };
       gallery_images: {
         Row: {
@@ -204,6 +247,7 @@ export interface Database {
           is_published?: boolean;
           created_at?: string;
         };
+        Relationships: [];
       };
       news: {
         Row: {
@@ -233,6 +277,7 @@ export interface Database {
           published_at?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
     };
     Views: {
@@ -242,6 +287,9 @@ export interface Database {
       [_ in never]: never;
     };
     Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
       [_ in never]: never;
     };
   };
