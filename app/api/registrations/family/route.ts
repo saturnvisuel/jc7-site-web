@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getTarif } from "@/lib/categories";
+import { computeAmounts, getCategoryLabel } from "@/lib/categories";
+import { isPaymentMethodAllowed } from "@/lib/payment-server";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -35,33 +36,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const registrationIds: string[] = [];
-    let childCount = 0;
-    let totalAmount = 0;
-
-    for (const child of children) {
-      // Ne compter que les enfants qui bénéficient des réductions (pas les baby ni les seniors)
-      if (child.category !== "senior" && child.category !== "baby") {
-        childCount++;
-      }
-
-      const tarif = getTarif(
-        child.category,
-        (child.category !== "senior" && child.category !== "baby") ? childCount : 1
+    // Le paiement par carte peut être désactivé côté club : on refuse avant
+    // tout enregistrement pour ne pas créer d'inscriptions orphelines.
+    if (!(await isPaymentMethodAllowed(payment_method))) {
+      return NextResponse.json(
+        { error: "Ce mode de paiement n'est pas disponible actuellement." },
+        { status: 400 }
       );
+    }
 
-      totalAmount += tarif;
+    const registrationIds: string[] = [];
 
-      console.log(`👶 Traitement enfant ${childCount}:`, {
-        firstName: child.firstName,
-        lastName: child.lastName,
-        category: child.category,
-        socialSecurityNumber: child.socialSecurityNumber,
-      });
+    // Calcul unique des montants : ils sont ensuite figés en base et repris
+    // tels quels par Stripe et par les reçus PDF.
+    const amounts = computeAmounts(children.map((child: any) => child.category));
+    const totalAmount = amounts.reduce((sum: number, amount: number) => sum + amount, 0);
+
+    for (const [index, child] of children.entries()) {
+      const tarif = amounts[index];
 
       const { data: registration, error } = await (supabaseAdmin
         .from("registrations") as any)
         .insert({
+          amount: tarif,
           first_name: child.firstName,
           last_name: child.lastName,
           birth_date: child.birthDate,
@@ -108,17 +105,14 @@ export async function POST(request: NextRequest) {
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
         line_items: children.map((child: any, index: number) => {
-          const childNum = child.category !== "senior" ? index + 1 : 1;
-          const tarif = getTarif(child.category, childNum);
+          const tarif = amounts[index];
 
           return {
             price_data: {
               currency: "eur",
               product_data: {
                 name: `Inscription Judo - ${child.firstName} ${child.lastName}`,
-                description: `Catégorie: ${child.category}${
-                  childNum > 1 ? ` (${childNum}ème enfant - réduction appliquée)` : ""
-                }`,
+                description: `Catégorie: ${getCategoryLabel(child.category)}`,
               },
               unit_amount: tarif * 100,
             },

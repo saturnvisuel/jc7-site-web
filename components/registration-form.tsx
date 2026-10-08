@@ -13,6 +13,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { FormStepper } from "@/components/ui/form-stepper";
 import { RGPDConsent } from "@/components/rgpd-consent";
 import { calculateCategory, getCategoryLabel, getTarif } from "@/lib/categories";
+import type { PaymentMethodOption } from "@/lib/payment";
+import { attachMedicalCertificate, validateCertificate } from "@/lib/medical-certificate";
 import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 
 const registrationSchema = z.object({
@@ -97,13 +99,19 @@ const STEP_FIELDS: FieldPath<RegistrationFormData>[][] = [
   ["paymentMethod"],
 ];
 
-export function RegistrationForm() {
+export function RegistrationForm({
+  paymentMethods,
+}: {
+  paymentMethods: PaymentMethodOption[];
+}) {
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [registrationId, setRegistrationId] = useState<string | null>(null);
   const [rgpdConsent, setRgpdConsent] = useState(false);
+  const [medicalCertificate, setMedicalCertificate] = useState<File | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
   const topRef = useRef<HTMLDivElement>(null);
 
   const isLastStep = step === STEPS.length - 1;
@@ -153,6 +161,21 @@ export function RegistrationForm() {
     goToStep(Math.min(step + 1, STEPS.length - 1));
   };
 
+  const handleCertificateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const validationError = validateCertificate(file);
+    if (validationError) {
+      setError(validationError);
+      event.target.value = "";
+      return;
+    }
+
+    setMedicalCertificate(file);
+    setError(null);
+  };
+
   const onSubmit = async (data: RegistrationFormData) => {
     if (!rgpdConsent) {
       setError("Vous devez accepter la politique de confidentialité pour continuer.");
@@ -193,10 +216,25 @@ export function RegistrationForm() {
       });
 
       if (!response.ok) {
-        throw new Error("Erreur lors de l'inscription");
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.error ?? "Erreur lors de l'inscription");
       }
 
       const result = await response.json();
+
+      // Le certificat ne peut être rattaché qu'après création de l'inscription,
+      // puisque son chemin de stockage contient l'identifiant.
+      if (result.id && medicalCertificate) {
+        setUploadingFile(true);
+        const attached = await attachMedicalCertificate(result.id, medicalCertificate);
+        setUploadingFile(false);
+
+        if (!attached) {
+          setError(
+            "Votre inscription est enregistrée, mais l'envoi du certificat médical a échoué. Vous pourrez le remettre au club."
+          );
+        }
+      }
 
       if (data.paymentMethod === "carte" && result.checkoutUrl) {
         window.location.href = result.checkoutUrl;
@@ -560,9 +598,30 @@ export function RegistrationForm() {
         </Button>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h2 className="text-xl font-bold mb-6 text-primary">Informations médicales</h2>
-        
+      <div className="bg-white p-6 rounded-lg shadow-sm border space-y-6">
+        <h2 className="text-xl font-bold text-primary">Informations médicales</h2>
+
+        <div className="space-y-2">
+          <Label htmlFor="medicalCertificate">Certificat médical (optionnel)</Label>
+          <Input
+            id="medicalCertificate"
+            type="file"
+            accept=".jpg,.jpeg,.png,.pdf"
+            onChange={handleCertificateChange}
+            disabled={isSubmitting || uploadingFile}
+            className="cursor-pointer"
+          />
+          {medicalCertificate && (
+            <p className="text-sm text-green-600">
+              Fichier sélectionné : {medicalCertificate.name}
+            </p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Formats acceptés : JPG, PNG, PDF (max 5 Mo). Vous pourrez aussi le remettre au
+            club lors de la première séance.
+          </p>
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="medicalNote">Note médicale (optionnel)</Label>
           <Textarea
@@ -588,9 +647,11 @@ export function RegistrationForm() {
               <SelectValue placeholder="Sélectionner un mode de paiement" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="carte">💳 Paiement en ligne (Carte bancaire)</SelectItem>
-              <SelectItem value="cheque">📝 Chèque (à remettre au club)</SelectItem>
-              <SelectItem value="especes">💵 Espèces (à remettre au club)</SelectItem>
+              {paymentMethods.map((method) => (
+                <SelectItem key={method.value} value={method.value}>
+                  {method.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           {errors.paymentMethod && (
@@ -659,11 +720,11 @@ export function RegistrationForm() {
         </Button>
 
         {isLastStep ? (
-          <Button type="submit" size="lg" disabled={isSubmitting || success}>
-            {isSubmitting ? (
+          <Button type="submit" size="lg" disabled={isSubmitting || uploadingFile || success}>
+            {isSubmitting || uploadingFile ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Traitement en cours...
+                {uploadingFile ? "Envoi du certificat..." : "Traitement en cours..."}
               </>
             ) : paymentMethod === "carte" ? (
               "Continuer vers le paiement"

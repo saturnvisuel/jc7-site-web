@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { Facebook, Instagram } from "lucide-react";
 import { CLUB_INFO } from "@/lib/club-info";
+import { getPaymentSettings } from "@/lib/payment-server";
 
-export function Footer() {
+export async function Footer() {
   const currentYear = new Date().getFullYear();
+  const paymentSettings = await getPaymentSettings();
 
   return (
     <footer className="bg-gray-900 text-gray-300 mt-auto">
@@ -95,7 +97,9 @@ export function Footer() {
             © {currentYear} {CLUB_INFO.name}. Tous droits réservés.
           </p>
           <p className="mt-2 text-xs">
-            Site conforme au RGPD • Paiement sécurisé par Stripe • Données hébergées dans l'UE
+            Site conforme au RGPD
+            {paymentSettings.carte && " • Paiement sécurisé par Stripe"} • Données hébergées dans
+            l&apos;UE
           </p>
           <p className="mt-2 text-xs text-gray-500">
             Développé par{" "}

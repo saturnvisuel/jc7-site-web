@@ -36,6 +36,7 @@ export interface Database {
           guardian_city: string | null;
           guardian_phone: string | null;
           guardian_email: string | null;
+          amount: number | null;
           payment_status: "pending" | "paid" | "cancelled";
           payment_method: "carte" | "cheque" | "especes";
           stripe_session_id: string | null;
@@ -67,6 +68,7 @@ export interface Database {
           guardian_city?: string | null;
           guardian_phone?: string | null;
           guardian_email?: string | null;
+          amount?: number | null;
           payment_status?: "pending" | "paid" | "cancelled";
           payment_method?: "carte" | "cheque" | "especes";
           stripe_session_id?: string | null;
@@ -98,6 +100,7 @@ export interface Database {
           guardian_city?: string | null;
           guardian_phone?: string | null;
           guardian_email?: string | null;
+          amount?: number | null;
           payment_status?: "pending" | "paid" | "cancelled";
           payment_method?: "carte" | "cheque" | "especes";
           stripe_session_id?: string | null;
@@ -276,6 +279,24 @@ export interface Database {
           published?: boolean;
           published_at?: string;
           created_at?: string;
+        };
+        Relationships: [];
+      };
+      payment_settings: {
+        Row: {
+          method: "carte" | "cheque" | "especes";
+          enabled: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          method: "carte" | "cheque" | "especes";
+          enabled?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          method?: "carte" | "cheque" | "especes";
+          enabled?: boolean;
+          updated_at?: string;
         };
         Relationships: [];
       };

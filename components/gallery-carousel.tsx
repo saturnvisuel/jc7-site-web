@@ -62,7 +62,8 @@ export function GalleryCarousel({ images }: { images: GalleryImage[] }) {
       tabIndex={0}
     >
       <div
-        className="relative aspect-[16/9] overflow-hidden rounded-2xl bg-gray-100 shadow-xl sm:rounded-3xl"
+        // 4/3 sur mobile : en 16/9 les photos se réduisent à une bande peu lisible
+        className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-gray-100 shadow-xl sm:aspect-[16/9] sm:rounded-3xl"
         onTouchStart={(event) => {
           touchStartX.current = event.touches[0].clientX;
         }}

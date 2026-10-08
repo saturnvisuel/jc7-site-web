@@ -10,11 +10,18 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { calculateCategory, CATEGORIES, getTarif, getCategoryLabel } from "@/lib/categories";
+import {
+  calculateCategory,
+  CATEGORIES,
+  computeAmounts,
+  getTarif,
+  getCategoryLabel,
+} from "@/lib/categories";
+import type { PaymentMethodOption } from "@/lib/payment";
 import { Trash2, Plus, ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import { RGPDConsent } from "@/components/rgpd-consent";
 import { FormStepper } from "@/components/ui/form-stepper";
-import { createClient } from "@/lib/supabase/client";
+import { attachMedicalCertificate, validateCertificate } from "@/lib/medical-certificate";
 
 const childSchema = z.object({
   firstName: z.string().min(2, "Prénom requis"),
@@ -75,7 +82,11 @@ const STEP_FIELDS: FieldPath<FamilyRegistrationFormData>[][] = [
   ["paymentMethod"],
 ];
 
-export function RegistrationFormFamily() {
+export function RegistrationFormFamily({
+  paymentMethods,
+}: {
+  paymentMethods: PaymentMethodOption[];
+}) {
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -153,84 +164,31 @@ export function RegistrationFormFamily() {
     goToStep(Math.min(step + 1, STEPS.length - 1));
   };
 
-  const calculateTotal = () => {
-    let childCount = 0;
-    let total = 0;
+  // Même calcul que l'API et que les reçus PDF : voir lib/categories.
+  const childAmounts = computeAmounts(children.map((child) => child.category || ""));
 
-    children.forEach((child) => {
-      if (child.category && child.category !== "senior") {
-        childCount++;
-        total += getTarif(child.category, childCount);
-      } else if (child.category === "senior") {
-        total += getTarif(child.category, 1);
-      }
-    });
+  const calculateTotal = () =>
+    children.reduce(
+      (total, child, index) => (child.category ? total + childAmounts[index] : total),
+      0
+    );
 
-    return total;
-  };
-
-  const getChildTarif = (index: number) => {
-    const child = children[index];
-    if (!child.category) return 0;
-
-    let childCount = 0;
-    for (let i = 0; i <= index; i++) {
-      if (children[i].category && children[i].category !== "senior") {
-        childCount++;
-      }
-    }
-
-    if (child.category === "senior") {
-      return getTarif(child.category, 1);
-    }
-
-    return getTarif(child.category, childCount);
-  };
+  const getChildTarif = (index: number) =>
+    children[index]?.category ? childAmounts[index] : 0;
 
   const handleFileChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
-    if (!validTypes.includes(file.type)) {
-      setError("Format de fichier non valide. Utilisez JPG, PNG ou PDF.");
+    const validationError = validateCertificate(file);
+    if (validationError) {
+      setError(validationError);
+      e.target.value = "";
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setError("Le fichier est trop volumineux. Maximum 5MB.");
-      return;
-    }
-
-    setMedicalCertificates(prev => ({ ...prev, [index]: file }));
+    setMedicalCertificates((prev) => ({ ...prev, [index]: file }));
     setError(null);
-  };
-
-  const uploadMedicalCertificate = async (file: File, registrationId: string): Promise<string | null> => {
-    try {
-      const supabase = createClient();
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${registrationId}-${Date.now()}.${fileExt}`;
-      const filePath = `medical-certificates/${fileName}`;
-
-      const { data, error } = await supabase.storage
-        .from('documents')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (error) {
-        console.error('Erreur upload Supabase:', error);
-        return null;
-      }
-
-      // Retourner le chemin du fichier (pas l'URL publique pour la sécurité)
-      return filePath;
-    } catch (error) {
-      console.error('Erreur lors de l\'upload:', error);
-      return null;
-    }
   };
 
   const onSubmit = async (data: FamilyRegistrationFormData) => {
@@ -275,19 +233,9 @@ export function RegistrationFormFamily() {
         for (let i = 0; i < result.registrationIds.length; i++) {
           const registrationId = result.registrationIds[i];
           const certificate = medicalCertificates[i];
-          
+
           if (certificate) {
-            const certificateUrl = await uploadMedicalCertificate(certificate, registrationId);
-            
-            if (certificateUrl) {
-              await fetch(`/api/registrations/${registrationId}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  medical_certificate_url: certificateUrl,
-                }),
-              });
-            }
+            await attachMedicalCertificate(registrationId, certificate);
           }
         }
         
@@ -731,44 +679,23 @@ export function RegistrationFormFamily() {
           </div>
 
           <div className="space-y-3">
-            <label className="flex items-center space-x-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-              <input
-                type="radio"
-                value="carte"
-                {...register("paymentMethod")}
-                className="h-4 w-4"
-              />
-              <div>
-                <p className="font-semibold">Carte bancaire (en ligne)</p>
-                <p className="text-sm text-muted-foreground">Paiement sécurisé par Stripe</p>
-              </div>
-            </label>
-
-            <label className="flex items-center space-x-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-              <input
-                type="radio"
-                value="cheque"
-                {...register("paymentMethod")}
-                className="h-4 w-4"
-              />
-              <div>
-                <p className="font-semibold">Chèque</p>
-                <p className="text-sm text-muted-foreground">À remettre lors de la première séance</p>
-              </div>
-            </label>
-
-            <label className="flex items-center space-x-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-              <input
-                type="radio"
-                value="especes"
-                {...register("paymentMethod")}
-                className="h-4 w-4"
-              />
-              <div>
-                <p className="font-semibold">Espèces</p>
-                <p className="text-sm text-muted-foreground">À remettre lors de la première séance</p>
-              </div>
-            </label>
+            {paymentMethods.map((method) => (
+              <label
+                key={method.value}
+                className="flex items-center space-x-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50"
+              >
+                <input
+                  type="radio"
+                  value={method.value}
+                  {...register("paymentMethod")}
+                  className="h-4 w-4"
+                />
+                <div>
+                  <p className="font-semibold">{method.label}</p>
+                  <p className="text-sm text-muted-foreground">{method.description}</p>
+                </div>
+              </label>
+            ))}
           </div>
 
           {errors.paymentMethod && (

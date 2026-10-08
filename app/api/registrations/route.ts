@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isPaymentMethodAllowed } from "@/lib/payment-server";
+import { getCategoryLabel, getTarif } from "@/lib/categories";
 import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { z } from "zod";
@@ -57,10 +59,24 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = registrationSchema.parse(body);
 
+    // Le paiement par carte peut être désactivé côté club : on refuse avant
+    // tout enregistrement pour ne pas créer d'inscription orpheline.
+    if (!(await isPaymentMethodAllowed(validatedData.payment_method))) {
+      return NextResponse.json(
+        { error: "Ce mode de paiement n'est pas disponible actuellement." },
+        { status: 400 }
+      );
+    }
+
+    // Montant figé à l'inscription : les reçus PDF le relisent au lieu de
+    // le recalculer, pour rester cohérents si la grille tarifaire évolue.
+    const amount = getTarif(validatedData.category);
+
     const { data: registration, error: dbError } = await supabaseAdmin
       .from("registrations")
       .insert({
         ...validatedData,
+        amount,
         payment_status: "pending",
       })
       .select()
@@ -94,9 +110,9 @@ export async function POST(request: NextRequest) {
                 currency: "eur",
                 product_data: {
                   name: "Inscription JC7",
-                  description: `Inscription pour ${validatedData.first_name} ${validatedData.last_name} - ${validatedData.category}`,
+                  description: `Inscription pour ${validatedData.first_name} ${validatedData.last_name} - ${getCategoryLabel(validatedData.category)}`,
                 },
-                unit_amount: 20000,
+                unit_amount: amount * 100,
               },
               quantity: 1,
             },

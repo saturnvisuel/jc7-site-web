@@ -11,6 +11,7 @@ import {
   Instagram,
 } from "lucide-react";
 import { CLUB_INFO } from "@/lib/club-info";
+import { getPaymentSettings } from "@/lib/payment-server";
 import { Navbar } from "@/components/navbar";
 import { Reveal } from "@/components/ui/reveal";
 import { Counter } from "@/components/ui/counter";
@@ -29,11 +30,12 @@ const STATS = [
 ];
 
 export default async function Home() {
-  const [professors, slots, news, galleryImages] = await Promise.all([
+  const [professors, slots, news, galleryImages, paymentSettings] = await Promise.all([
     getProfessors(),
     getScheduleSlots(),
     getPublishedNews(3),
     getGalleryImages(),
+    getPaymentSettings(),
   ]);
 
   const statValues = [slots.length, professors.length, 4, 20];
@@ -172,7 +174,9 @@ export default async function Home() {
                 Inscription sécurisée
               </h3>
               <p className="text-gray-600 leading-relaxed">
-                Paiement en ligne sécurisé ou sur place selon votre préférence
+                {paymentSettings.carte
+                  ? "Paiement en ligne sécurisé ou sur place selon votre préférence"
+                  : "Inscription en ligne, règlement par chèque ou espèces au club"}
               </p>
             </Reveal>
           </div>

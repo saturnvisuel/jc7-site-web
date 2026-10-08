@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { PaymentsManagement } from "@/components/payments-management";
+import { PaymentSettingsManager } from "@/components/admin/payment-settings-manager";
+import { getPaymentSettings } from "@/lib/payment-server";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft, LogOut } from "lucide-react";
@@ -18,11 +20,14 @@ export default async function PaymentsPage() {
   }
 
   // Utiliser le client admin pour récupérer les données
-  const { data: registrations } = await supabaseAdmin
-    .from("registrations")
-    .select("*")
-    .in("payment_method", ["cheque", "especes"])
-    .order("created_at", { ascending: false });
+  const [{ data: registrations }, paymentSettings] = await Promise.all([
+    supabaseAdmin
+      .from("registrations")
+      .select("*")
+      .in("payment_method", ["cheque", "especes"])
+      .order("created_at", { ascending: false }),
+    getPaymentSettings(),
+  ]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -56,6 +61,8 @@ export default async function PaymentsPage() {
       </header>
 
       <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <PaymentSettingsManager settings={paymentSettings} />
+
         <div className="mb-4 sm:mb-6">
           <h2 className="text-base sm:text-lg text-muted-foreground">
             Paiements en attente (chèque et espèces)

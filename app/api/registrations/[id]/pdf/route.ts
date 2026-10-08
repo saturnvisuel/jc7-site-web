@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { jsPDF } from "jspdf";
+import { getCategoryLabel, getTarif } from "@/lib/categories";
+import { drawPdfFooter, drawPdfHeader, loadClubLogo, pdfAttachmentHeader } from "@/lib/pdf";
 
 export async function GET(
   request: NextRequest,
@@ -36,22 +38,18 @@ export async function GET(
 
     // Créer le PDF
     const doc = new jsPDF();
-    
-    // En-tête
-    doc.setFontSize(20);
-    doc.setFont("helvetica", "bold");
-    doc.text("FICHE D'INSCRIPTION", 105, 20, { align: "center" });
-    doc.text("JC7 - JUDO COURNEUVIEN 7", 105, 30, { align: "center" });
-    
+    const logo = await loadClubLogo(request);
+
+    let y = drawPdfHeader(doc, "Fiche d'inscription", logo);
+
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text(`Date d'inscription : ${new Date(registration.created_at).toLocaleDateString("fr-FR")}`, 105, 40, { align: "center" });
-    
-    // Ligne de séparation
-    doc.setLineWidth(0.5);
-    doc.line(20, 45, 190, 45);
-    
-    let y = 55;
+    doc.text(
+      `Date d'inscription : ${new Date(registration.created_at).toLocaleDateString("fr-FR")}`,
+      20,
+      y
+    );
+    y += 12;
     
     // INFORMATIONS DU PRATIQUANT
     doc.setFontSize(14);
@@ -68,7 +66,7 @@ export async function GET(
     y += 7;
     doc.text(`Date de naissance : ${new Date(registration.birth_date).toLocaleDateString("fr-FR")}`, 20, y);
     y += 7;
-    doc.text(`Catégorie d'âge : ${registration.category}`, 20, y);
+    doc.text(`Catégorie d'âge : ${getCategoryLabel(registration.category)}`, 20, y);
     y += 7;
     
     if (registration.belt) {
@@ -158,21 +156,24 @@ export async function GET(
       registration.payment_method === "cheque" ? "Chèque" :
       "Espèces";
     
+    // Montant figé à l'inscription ; repli sur la grille pour les inscriptions
+    // antérieures à la migration 010.
+    const montant = (registration as any).amount ?? getTarif(registration.category);
+
+    doc.text(`Montant dû : ${montant} €`, 20, y);
+    y += 7;
+
     doc.text(`Mode de paiement : ${paymentMethodLabel}`, 20, y);
     y += 7;
     
     const paymentStatusLabel = 
-      registration.payment_status === "paid" ? "Payé ✓" :
+      registration.payment_status === "paid" ? "Payé" :
       registration.payment_status === "pending" ? "En attente" :
       "Annulé";
     
     doc.text(`Statut : ${paymentStatusLabel}`, 20, y);
     
-    // Pied de page
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "italic");
-    doc.text("JC7 - Judo Courneuvien 7", 105, 280, { align: "center" });
-    doc.text("Document généré automatiquement", 105, 285, { align: "center" });
+    drawPdfFooter(doc);
     
     // Générer le PDF en buffer
     const pdfBuffer = doc.output("arraybuffer");
@@ -181,7 +182,9 @@ export async function GET(
     return new NextResponse(pdfBuffer, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="inscription-${registration.last_name}-${registration.first_name}.pdf"`,
+        "Content-Disposition": pdfAttachmentHeader(
+          `inscription-${registration.last_name}-${registration.first_name}.pdf`
+        ),
       },
     });
   } catch (error) {

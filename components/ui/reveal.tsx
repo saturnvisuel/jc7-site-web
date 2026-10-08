@@ -49,11 +49,21 @@ export function Reveal({
           setVisible(false);
         }
       },
-      { threshold: 0.15, rootMargin: "0px 0px -60px 0px" }
+      // Seuil en pixels plutôt qu'en ratio : un bloc plus haut que l'écran
+      // (cas fréquent sur mobile) n'atteint jamais 15 % de visibilité.
+      { threshold: 0, rootMargin: "0px 0px -40px 0px" }
     );
 
     observer.observe(node);
-    return () => observer.disconnect();
+
+    // Filet de sécurité : le contenu ne doit jamais rester masqué, même si
+    // l'observer ne se déclenche pas (navigateur exotique, onglet restauré...).
+    const fallback = window.setTimeout(() => setVisible(true), 1200);
+
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(fallback);
+    };
   }, [once]);
 
   return (

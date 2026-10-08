@@ -64,6 +64,29 @@ export function getTarif(category: string, childNumber: number = 1): number {
   return baseTarif;
 }
 
+/**
+ * Référence unique du calcul des tarifs d'un groupe d'inscriptions.
+ * Conserve l'ordre reçu et applique les réductions familiales : les baby et
+ * les seniors sont facturés plein tarif et ne consomment pas de rang.
+ * Toute autre implémentation du calcul dans l'application est un bug.
+ */
+export function computeAmounts(categories: string[]): number[] {
+  let childCount = 0;
+
+  return categories.map((category) => {
+    if (category === "senior" || category === "baby") {
+      return getTarif(category, 1);
+    }
+    childCount++;
+    return getTarif(category, childCount);
+  });
+}
+
+/** Total d'un groupe d'inscriptions, réductions familiales comprises. */
+export function computeTotal(categories: string[]): number {
+  return computeAmounts(categories).reduce((sum, amount) => sum + amount, 0);
+}
+
 export function calculateFamilyDiscount(registrations: Array<{ category: string }>): Array<{ category: string; tarif: number; childNumber: number }> {
   // Trier pour mettre les seniors et baby à la fin
   const sorted = [...registrations].sort((a, b) => {

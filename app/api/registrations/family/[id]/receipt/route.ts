@@ -1,7 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { jsPDF } from "jspdf";
-import { getTarif } from "@/lib/categories";
+import { computeAmounts, getCategoryLabel, getTarif } from "@/lib/categories";
+import {
+  ACCENT_COLOR,
+  CONTENT_WIDTH,
+  MARGIN,
+  drawInfoBlock,
+  drawPdfFooter,
+  drawPdfHeader,
+  drawSectionTitle,
+  loadClubLogo,
+  pdfAttachmentHeader,
+} from "@/lib/pdf";
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  carte: "Carte bancaire (en ligne)",
+  cheque: "Chèque",
+  especes: "Espèces",
+};
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -54,123 +71,163 @@ export async function GET(
 
     // Créer le PDF
     const doc = new jsPDF();
-    let yPos = 20;
+    const logo = await loadClubLogo(request);
 
-    // En-tête
-    doc.setFontSize(20);
-    doc.text("REÇU D'INSCRIPTION", 105, yPos, { align: "center" });
+    let yPos = drawPdfHeader(
+      doc,
+      isFamily ? "Reçu d'inscription familiale" : "Reçu d'inscription",
+      logo
+    );
+
+    // Référence et date
+    doc.setFontSize(9);
+    doc.setTextColor(110, 110, 110);
+    doc.text(`Référence : ${registration.id.substring(0, 8).toUpperCase()}`, MARGIN, yPos);
+    doc.text(
+      `Inscription du ${new Date(registration.created_at).toLocaleDateString("fr-FR")}`,
+      210 - MARGIN,
+      yPos,
+      { align: "right" }
+    );
+    doc.setTextColor(0, 0, 0);
     yPos += 10;
 
-    doc.setFontSize(16);
-    doc.text("JC7 - Judo Courneuvien 7", 105, yPos, { align: "center" });
-    yPos += 15;
+    // Responsable légal
+    yPos = drawSectionTitle(doc, "Responsable légal", yPos);
+    yPos = drawInfoBlock(
+      doc,
+      [
+        [
+          "Nom et prénom",
+          `${registration.guardian_last_name || ""} ${registration.guardian_first_name || ""}`.trim(),
+        ],
+        ["Adresse", `${registration.guardian_address || ""}`.trim()],
+        [
+          "Code postal, ville",
+          `${registration.guardian_postal_code || ""} ${registration.guardian_city || ""}`.trim(),
+        ],
+        ["Téléphone", registration.guardian_phone || ""],
+        ["Email", registration.guardian_email || ""],
+      ],
+      yPos
+    );
 
-    // Informations du responsable légal
-    doc.setFontSize(12);
-    doc.text("RESPONSABLE LÉGAL", 20, yPos);
-    yPos += 8;
+    // Détail des inscriptions, présenté en tableau
+    yPos = drawSectionTitle(doc, isFamily ? "Inscriptions" : "Inscription", yPos);
 
-    doc.setFontSize(10);
-    doc.text(`${registration.guardian_first_name} ${registration.guardian_last_name}`, 20, yPos);
-    yPos += 6;
-    doc.text(`${registration.guardian_address}`, 20, yPos);
-    yPos += 6;
-    doc.text(`${registration.guardian_postal_code} ${registration.guardian_city}`, 20, yPos);
-    yPos += 6;
-    doc.text(`Tél: ${registration.guardian_phone}`, 20, yPos);
-    yPos += 6;
-    doc.text(`Email: ${registration.guardian_email}`, 20, yPos);
-    yPos += 12;
+    // En-tête du tableau
+    doc.setFillColor(...ACCENT_COLOR);
+    doc.rect(MARGIN, yPos - 4, CONTENT_WIDTH, 7, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text("Pratiquant", MARGIN + 3, yPos);
+    doc.text("Catégorie", MARGIN + 70, yPos);
+    doc.text("Montant", 210 - MARGIN - 3, yPos, { align: "right" });
+    doc.setTextColor(0, 0, 0);
+    doc.setFont("helvetica", "normal");
+    yPos += 9;
 
-    // Ligne de séparation
-    doc.line(20, yPos, 190, yPos);
-    yPos += 10;
-
-    // Titre des inscriptions
-    doc.setFontSize(12);
-    doc.text(isFamily ? "INSCRIPTIONS" : "INSCRIPTION", 20, yPos);
-    yPos += 10;
-
-    // Liste des inscriptions
-    let childCount = 0;
-    let totalAmount = 0;
+    // Montants figés à l'inscription ; repli sur le calcul de référence pour
+    // les inscriptions antérieures à la migration 010.
+    const fallbackAmounts = computeAmounts(registrations.map((reg: any) => reg.category));
+    const amounts = registrations.map(
+      (reg: any, index: number) => reg.amount ?? fallbackAmounts[index]
+    );
+    const totalAmount = amounts.reduce((sum: number, amount: number) => sum + amount, 0);
 
     registrations.forEach((reg, index) => {
-      if (reg.category !== "senior") {
-        childCount++;
+      const tarif = amounts[index];
+      const hasDiscount = tarif < getTarif(reg.category, 1);
+
+      // Fond alterné pour la lisibilité
+      if (index % 2 === 1) {
+        doc.setFillColor(247, 248, 250);
+        doc.rect(MARGIN, yPos - 4.5, CONTENT_WIDTH, 11, "F");
       }
 
-      const tarif = getTarif(
-        reg.category,
-        reg.category !== "senior" ? childCount : 1
+      doc.setFontSize(9.5);
+      doc.setFont("helvetica", "bold");
+      doc.text(`${reg.last_name} ${reg.first_name}`, MARGIN + 3, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(110, 110, 110);
+      doc.text(
+        `né(e) le ${new Date(reg.birth_date).toLocaleDateString("fr-FR")}`,
+        MARGIN + 3,
+        yPos + 4
       );
-      totalAmount += tarif;
+      doc.setTextColor(0, 0, 0);
 
+      doc.setFontSize(9);
+      doc.text(
+        doc.splitTextToSize(getCategoryLabel(reg.category), 55),
+        MARGIN + 70,
+        yPos
+      );
+
+      doc.setFont("helvetica", "bold");
       doc.setFontSize(10);
-      doc.text(`${index + 1}. ${reg.first_name} ${reg.last_name}`, 20, yPos);
-      yPos += 6;
-      doc.text(`   Date de naissance: ${new Date(reg.birth_date).toLocaleDateString("fr-FR")}`, 20, yPos);
-      yPos += 6;
-      doc.text(`   Catégorie: ${reg.category}`, 20, yPos);
-      yPos += 6;
-      
-      if (isFamily && childCount > 1 && reg.category !== "senior") {
-        doc.text(`   Montant: ${tarif} € (réduction ${childCount}ème enfant)`, 20, yPos);
-      } else {
-        doc.text(`   Montant: ${tarif} €`, 20, yPos);
-      }
-      yPos += 10;
+      doc.text(`${tarif} €`, 210 - MARGIN - 3, yPos, { align: "right" });
+      doc.setFont("helvetica", "normal");
 
-      // Nouvelle page si nécessaire
-      if (yPos > 250) {
+      if (hasDiscount) {
+        doc.setFontSize(7.5);
+        doc.setTextColor(22, 128, 61);
+        doc.text("réduction familiale", 210 - MARGIN - 3, yPos + 4, {
+          align: "right",
+        });
+        doc.setTextColor(0, 0, 0);
+      }
+
+      yPos += 12;
+
+      if (yPos > 240) {
         doc.addPage();
-        yPos = 20;
+        yPos = 30;
       }
     });
 
-    // Ligne de séparation
-    yPos += 5;
-    doc.line(20, yPos, 190, yPos);
-    yPos += 10;
-
     // Total
-    doc.setFontSize(14);
-    doc.text(`TOTAL: ${totalAmount} €`, 20, yPos);
-    yPos += 10;
-
-    // Mode de paiement
+    doc.setFillColor(...ACCENT_COLOR);
+    doc.roundedRect(MARGIN, yPos, CONTENT_WIDTH, 16, 2, 2, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    const paymentMethodLabels: Record<string, string> = {
-      carte: "Carte bancaire",
-      cheque: "Chèque",
-      especes: "Espèces",
-    };
-    doc.text(
-      `Mode de paiement: ${paymentMethodLabels[registration.payment_method] || registration.payment_method}`,
-      20,
-      yPos
-    );
-    yPos += 6;
+    doc.text("Total à régler", MARGIN + 6, yPos + 10);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text(`${totalAmount} €`, 210 - MARGIN - 6, yPos + 11, { align: "right" });
+    doc.setTextColor(0, 0, 0);
+    doc.setFont("helvetica", "normal");
+    yPos += 22;
 
-    doc.text(
-      `Statut: ${registration.payment_status === "paid" ? "Payé" : "En attente"}`,
-      20,
-      yPos
-    );
-    yPos += 15;
-
-    // Date d'émission
-    doc.setFontSize(8);
-    doc.text(
-      `Reçu émis le ${new Date().toLocaleDateString("fr-FR")} à ${new Date().toLocaleTimeString("fr-FR")}`,
-      20,
+    // Règlement
+    yPos = drawSectionTitle(doc, "Règlement", yPos);
+    yPos = drawInfoBlock(
+      doc,
+      [
+        [
+          "Mode de paiement",
+          PAYMENT_METHOD_LABELS[registration.payment_method] ||
+            registration.payment_method ||
+            "-",
+        ],
+        ["Statut", registration.payment_status === "paid" ? "Payé" : "En attente"],
+      ],
       yPos
     );
 
-    // Pied de page
-    doc.setFontSize(8);
-    doc.text("JC7 - Judo Courneuvien 7", 105, 280, { align: "center" });
-    doc.text("www.jc7.fr", 105, 285, { align: "center" });
+    if (registration.payment_status !== "paid") {
+      doc.setFontSize(9);
+      const instructions =
+        registration.payment_method === "cheque"
+          ? `Merci de remettre votre chèque de ${totalAmount} € à l'ordre de JC7 lors de la première séance, accompagné de ce reçu.`
+          : `Merci de régler ${totalAmount} € en espèces lors de la première séance et de présenter ce reçu.`;
+      doc.text(doc.splitTextToSize(instructions, CONTENT_WIDTH), MARGIN, yPos);
+    }
+
+    drawPdfFooter(doc);
 
     // Générer le PDF
     const pdfBuffer = doc.output("arraybuffer");
@@ -178,7 +235,9 @@ export async function GET(
     return new NextResponse(pdfBuffer, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="recu_inscription_${registration.last_name}_${new Date().getTime()}.pdf"`,
+        "Content-Disposition": pdfAttachmentHeader(
+          `recu_inscription_${registration.last_name}_${new Date().getTime()}.pdf`
+        ),
       },
     });
   } catch (error) {

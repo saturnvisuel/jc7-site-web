@@ -103,7 +103,8 @@ export function ExportCSVDialog({ data }: ExportCSVDialogProps) {
       return rowData;
     });
 
-    const csv = Papa.unparse(csvData);
+    // Point-virgule : séparateur attendu par Excel en configuration française
+    const csv = Papa.unparse(csvData, { delimiter: ";" });
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" }); // BOM pour Excel
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
