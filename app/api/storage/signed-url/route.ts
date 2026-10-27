@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -16,14 +17,20 @@ export async function POST(request: NextRequest) {
 
     const { filePath } = await request.json();
 
-    if (!filePath) {
+    if (typeof filePath !== "string" || !filePath) {
       return NextResponse.json({ error: "Chemin du fichier requis" }, { status: 400 });
     }
 
-    // Générer une URL signée valide pendant 1 heure
-    const { data, error } = await supabase.storage
-      .from('documents')
-      .createSignedUrl(filePath, 3600); // 3600 secondes = 1 heure
+    // Pas de remontée d'arborescence : on reste dans le dossier des certificats.
+    if (!filePath.startsWith("medical-certificates/") || filePath.includes("..")) {
+      return NextResponse.json({ error: "Chemin non autorisé" }, { status: 403 });
+    }
+
+    // La session vient d'être vérifiée : on signe avec la clé de service pour
+    // ne pas dépendre des policies de stockage côté utilisateur.
+    const { data, error } = await supabaseAdmin.storage
+      .from("documents")
+      .createSignedUrl(filePath, 3600); // 1 heure
 
     if (error) {
       console.error('Erreur création URL signée:', error);

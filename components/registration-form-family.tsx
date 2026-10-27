@@ -22,6 +22,12 @@ import { Trash2, Plus, ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import { RGPDConsent } from "@/components/rgpd-consent";
 import { FormStepper } from "@/components/ui/form-stepper";
 import { attachMedicalCertificate, validateCertificate } from "@/lib/medical-certificate";
+import {
+  LICENSE_EXAMPLE,
+  LICENSE_HINT,
+  LICENSE_LENGTH,
+  licenseNumberSchema,
+} from "@/lib/license";
 
 const childSchema = z.object({
   firstName: z.string().min(2, "Prénom requis"),
@@ -30,17 +36,7 @@ const childSchema = z.object({
   category: z.string().min(1, "Catégorie requise"),
   socialSecurityNumber: z.string().min(15, "Numéro de sécurité sociale requis (15 chiffres)"),
   belt: z.string().optional(),
-  licenseNumber: z.string().optional().refine(
-    (val) => {
-      if (!val || val === "") return true;
-      // Format: MJJMMAAAANNNNNXX (17 caractères)
-      const regex = /^[MF]\d{8}[A-Z*]{5}\d{2}$/;
-      return regex.test(val);
-    },
-    {
-      message: "Format invalide. Exemple: M18121999TAUPI01",
-    }
-  ),
+  licenseNumber: licenseNumberSchema,
   medicalNote: z.string().optional(),
 });
 
@@ -558,8 +554,8 @@ export function RegistrationFormFamily({
                 <Input
                   id={`children.${index}.licenseNumber`}
                   {...register(`children.${index}.licenseNumber`)}
-                  placeholder="Ex: M18121999TAUPI01"
-                  maxLength={17}
+                  placeholder={`Ex: ${LICENSE_EXAMPLE}`}
+                  maxLength={LICENSE_LENGTH}
                   className="uppercase"
                 />
                 {errors.children?.[index]?.licenseNumber && (
@@ -567,9 +563,7 @@ export function RegistrationFormFamily({
                     {errors.children[index]?.licenseNumber?.message}
                   </p>
                 )}
-                <p className="text-xs text-muted-foreground">
-                  Pour les anciens licenciés uniquement. Format: MJJMMAAAANNNNNXX
-                </p>
+                <p className="text-xs text-muted-foreground">{LICENSE_HINT}</p>
               </div>
 
               <div className="space-y-2">

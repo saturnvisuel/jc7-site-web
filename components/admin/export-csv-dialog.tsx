@@ -36,6 +36,7 @@ const allColumns: ColumnConfig[] = [
   { key: "birth_date", label: "Date de naissance", getValue: (row) => row.birth_date },
   { key: "category", label: "Catégorie", getValue: (row) => row.category },
   { key: "belt", label: "Ceinture", getValue: (row) => row.belt || "" },
+  { key: "license_number", label: "N° de licence", getValue: (row) => row.license_number || "" },
   { key: "address", label: "Adresse", getValue: (row) => (row as any).address || "" },
   { key: "postal_code", label: "Code postal", getValue: (row) => (row as any).postal_code || "" },
   { key: "city", label: "Ville", getValue: (row) => (row as any).city || "" },

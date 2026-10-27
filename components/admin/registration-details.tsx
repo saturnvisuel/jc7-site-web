@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Save, Trash2, Download, FileText, Image } from "lucide-react";
 import Link from "next/link";
 import { Database } from "@/lib/supabase/types";
+import { LICENSE_EXAMPLE, LICENSE_LENGTH } from "@/lib/license";
 
 type Registration = Database["public"]["Tables"]["registrations"]["Row"];
 
@@ -29,6 +30,7 @@ export function RegistrationDetails({ registration }: RegistrationDetailsProps) 
     phone: registration.phone,
     emergency_contact: registration.emergency_contact,
     category: registration.category,
+    license_number: registration.license_number || "",
     medical_note: registration.medical_note || "",
     payment_status: registration.payment_status,
   });
@@ -179,6 +181,20 @@ export function RegistrationDetails({ registration }: RegistrationDetailsProps) 
                   <SelectItem value="senior">Senior (18+ ans)</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="license_number">N° de licence</Label>
+              <Input
+                id="license_number"
+                value={formData.license_number}
+                onChange={(e) =>
+                  setFormData({ ...formData, license_number: e.target.value.toUpperCase() })
+                }
+                disabled={!isEditing}
+                placeholder={LICENSE_EXAMPLE}
+                maxLength={LICENSE_LENGTH}
+                className="font-mono"
+              />
             </div>
           </div>
         </div>

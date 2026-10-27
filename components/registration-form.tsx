@@ -15,6 +15,12 @@ import { RGPDConsent } from "@/components/rgpd-consent";
 import { calculateCategory, getCategoryLabel, getTarif } from "@/lib/categories";
 import type { PaymentMethodOption } from "@/lib/payment";
 import { attachMedicalCertificate, validateCertificate } from "@/lib/medical-certificate";
+import {
+  LICENSE_EXAMPLE,
+  LICENSE_HINT,
+  LICENSE_LENGTH,
+  licenseNumberSchema,
+} from "@/lib/license";
 import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 
 const registrationSchema = z.object({
@@ -24,6 +30,7 @@ const registrationSchema = z.object({
   birthDate: z.string().min(1, "La date de naissance est requise"),
   category: z.string().min(1, "Catégorie requise"),
   belt: z.string().optional(),
+  licenseNumber: licenseNumberSchema,
   address: z.string().min(5, "Adresse requise"),
   postalCode: z.string().min(5, "Code postal requis"),
   city: z.string().min(2, "Ville requise"),
@@ -195,6 +202,7 @@ export function RegistrationForm({
           birth_date: data.birthDate,
           category: data.category,
           belt: data.belt || null,
+          license_number: data.licenseNumber || null,
           address: data.address,
           postal_code: data.postalCode,
           city: data.city,
@@ -360,6 +368,21 @@ export function RegistrationForm({
                 <SelectItem value="noire">Noire</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="licenseNumber">Numéro de licence (optionnel)</Label>
+            <Input
+              id="licenseNumber"
+              {...register("licenseNumber")}
+              placeholder={`Ex: ${LICENSE_EXAMPLE}`}
+              maxLength={LICENSE_LENGTH}
+              className="uppercase"
+            />
+            {errors.licenseNumber && (
+              <p className="text-sm text-destructive">{errors.licenseNumber.message}</p>
+            )}
+            <p className="text-xs text-muted-foreground">{LICENSE_HINT}</p>
           </div>
 
           <div className="space-y-2">

@@ -37,6 +37,7 @@ export interface Database {
           guardian_phone: string | null;
           guardian_email: string | null;
           amount: number | null;
+          family_id: string | null;
           payment_status: "pending" | "paid" | "cancelled";
           payment_method: "carte" | "cheque" | "especes";
           stripe_session_id: string | null;
@@ -69,6 +70,7 @@ export interface Database {
           guardian_phone?: string | null;
           guardian_email?: string | null;
           amount?: number | null;
+          family_id?: string | null;
           payment_status?: "pending" | "paid" | "cancelled";
           payment_method?: "carte" | "cheque" | "especes";
           stripe_session_id?: string | null;
@@ -101,6 +103,7 @@ export interface Database {
           guardian_phone?: string | null;
           guardian_email?: string | null;
           amount?: number | null;
+          family_id?: string | null;
           payment_status?: "pending" | "paid" | "cancelled";
           payment_method?: "carte" | "cheque" | "especes";
           stripe_session_id?: string | null;

@@ -51,13 +51,28 @@ export async function GET(
       );
     }
 
-    // Récupérer toutes les inscriptions de la même famille (même email responsable)
-    const { data: familyRegistrations, error: familyError } = await supabaseAdmin
-      .from("registrations")
-      .select("*")
-      .eq("guardian_email", registration.guardian_email)
-      .eq("created_at", registration.created_at)
-      .order("created_at", { ascending: true });
+    // Récupérer la fratrie inscrite dans la même soumission.
+    // On s'appuie sur family_id ; pour les inscriptions antérieures à la
+    // migration 012, on retombe sur le responsable légal et une fenêtre de
+    // deux minutes, car chaque ligne a son propre created_at à la milliseconde.
+    let familyQuery = supabaseAdmin.from("registrations").select("*");
+
+    if (registration.family_id) {
+      familyQuery = familyQuery.eq("family_id", registration.family_id);
+    } else if (registration.guardian_email) {
+      const createdAt = new Date(registration.created_at).getTime();
+      familyQuery = familyQuery
+        .eq("guardian_email", registration.guardian_email)
+        .gte("created_at", new Date(createdAt - 120_000).toISOString())
+        .lte("created_at", new Date(createdAt + 120_000).toISOString());
+    } else {
+      familyQuery = familyQuery.eq("id", registration.id);
+    }
+
+    const { data: familyRegistrations, error: familyError } = await familyQuery.order(
+      "created_at",
+      { ascending: true }
+    );
 
     if (familyError) {
       return NextResponse.json(
@@ -66,7 +81,7 @@ export async function GET(
       );
     }
 
-    const registrations = familyRegistrations || [registration];
+    const registrations = familyRegistrations?.length ? familyRegistrations : [registration];
     const isFamily = registrations.length > 1;
 
     // Créer le PDF
@@ -113,7 +128,11 @@ export async function GET(
     );
 
     // Détail des inscriptions, présenté en tableau
-    yPos = drawSectionTitle(doc, isFamily ? "Inscriptions" : "Inscription", yPos);
+    yPos = drawSectionTitle(
+      doc,
+      isFamily ? `Inscriptions (${registrations.length} pratiquants)` : "Inscription",
+      yPos
+    );
 
     // En-tête du tableau
     doc.setFillColor(...ACCENT_COLOR);
@@ -194,7 +213,13 @@ export async function GET(
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    doc.text("Total à régler", MARGIN + 6, yPos + 10);
+    doc.text(
+      isFamily
+        ? `Total à régler pour ${registrations.length} inscriptions`
+        : "Total à régler",
+      MARGIN + 6,
+      yPos + 10
+    );
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
     doc.text(`${totalAmount} €`, 210 - MARGIN - 6, yPos + 11, { align: "right" });

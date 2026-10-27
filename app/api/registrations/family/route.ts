@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { computeAmounts, getCategoryLabel } from "@/lib/categories";
 import { isPaymentMethodAllowed } from "@/lib/payment-server";
@@ -47,6 +48,10 @@ export async function POST(request: NextRequest) {
 
     const registrationIds: string[] = [];
 
+    // Identifiant commun à la fratrie : indispensable pour que le reçu
+    // familial retrouve toutes les inscriptions de cette soumission.
+    const familyId = randomUUID();
+
     // Calcul unique des montants : ils sont ensuite figés en base et repris
     // tels quels par Stripe et par les reçus PDF.
     const amounts = computeAmounts(children.map((child: any) => child.category));
@@ -59,6 +64,7 @@ export async function POST(request: NextRequest) {
         .from("registrations") as any)
         .insert({
           amount: tarif,
+          family_id: familyId,
           first_name: child.firstName,
           last_name: child.lastName,
           birth_date: child.birthDate,

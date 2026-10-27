@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, FileText } from "lucide-react";
+import { Search, FileText, Paperclip } from "lucide-react";
 import { Database } from "@/lib/supabase/types";
 import { ExportCSVDialog } from "@/components/admin/export-csv-dialog";
 
@@ -48,6 +48,28 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
 
+  /** Ouvre le certificat via une URL signée temporaire (document privé). */
+  const openCertificate = async (filePath: string) => {
+    try {
+      const response = await fetch("/api/storage/signed-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filePath }),
+      });
+
+      const { signedUrl, error } = await response.json();
+
+      if (!response.ok || !signedUrl) {
+        alert(error ?? "Impossible d'ouvrir le certificat médical.");
+        return;
+      }
+
+      window.open(signedUrl, "_blank");
+    } catch {
+      alert("Impossible d'ouvrir le certificat médical.");
+    }
+  };
+
   const columns: ColumnDef<Registration>[] = [
     {
       accessorKey: "first_name",
@@ -66,6 +88,18 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
       header: "Téléphone",
     },
     {
+      accessorKey: "license_number",
+      header: "N° de licence",
+      cell: ({ row }) => {
+        const license = row.getValue("license_number") as string | null;
+        return license ? (
+          <span className="font-mono text-xs">{license}</span>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        );
+      },
+    },
+    {
       accessorKey: "category",
       header: "Catégorie",
     },
@@ -78,6 +112,30 @@ export function RegistrationsTable({ data }: RegistrationsTableProps) {
       accessorKey: "created_at",
       header: "Date d'inscription",
       cell: ({ row }) => new Date(row.getValue("created_at")).toLocaleDateString("fr-FR"),
+    },
+    {
+      id: "certificate",
+      header: "Certificat",
+      cell: ({ row }) => {
+        const path = (row.original as { medical_certificate_url?: string | null })
+          .medical_certificate_url;
+
+        if (!path) {
+          return <span className="text-xs text-muted-foreground">Non fourni</span>;
+        }
+
+        return (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-blue-700 hover:bg-blue-50"
+            onClick={() => openCertificate(path)}
+          >
+            <Paperclip className="h-4 w-4 mr-2" />
+            Ouvrir
+          </Button>
+        );
+      },
     },
     {
       id: "actions",
